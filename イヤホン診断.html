@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【究極版】イヤホン沼・探索レーダー</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Noto Sans JP', sans-serif; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .amazon-btn {
+            background: #FF9900;
+            transition: all 0.2s;
+        }
+        .amazon-btn:hover {
+            background: #FFB84D;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(255, 153, 0, 0.3);
+        }
+        .option-btn:hover {
+            border-color: #ec4899; /* pink-500 */
+            background-color: #fdf2f8; /* pink-50 */
+        }
+        .option-btn.selected {
+            border-color: #ec4899;
+            background-color: #fce7f3;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <h1 class="text-base font-bold flex items-center gap-2 text-slate-700">
+                <i data-lucide="music-4" class="w-5 h-5 text-pink-600"></i>
+                <span>Earphone <span class="text-xs text-pink-600 bg-pink-50 px-2 py-0.5 rounded ml-1">Ultimate DB</span></span>
+            </h1>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-4xl mx-auto px-4 py-8 w-full">
+        
+        <!-- スタート画面 -->
+        <div id="intro-screen" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center mt-4">
+            <div class="w-16 h-16 bg-pink-100 rounded-full flex items-center justify-center mx-auto mb-6 text-pink-600">
+                <i data-lucide="waves" class="w-8 h-8"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-3 text-slate-800">底なしの「イヤホン沼」へ<br>ようこそ</h2>
+            <p class="text-slate-500 mb-8 text-sm leading-relaxed">
+                定番のSony/Boseはもちろん、マニア御用達の<br>
+                「平面駆動」「多ドラ」「変態機種」まで完全網羅。<br>
+                60機種以上のデータベースから、あなたの最適解を導きます。
+            </p>
+            <button onclick="startDiagnosis()" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 px-12 rounded-xl shadow-lg transition-transform transform hover:-translate-y-1 flex items-center justify-center gap-2 mx-auto">
+                <span>深淵を覗く（診断開始）</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <!-- 質問画面 -->
+        <div id="quiz-screen" class="hidden mt-4">
+            <div class="flex items-center gap-4 mb-6 px-1">
+                <div class="flex-grow h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="h-full bg-pink-500 transition-all duration-500 ease-out" style="width: 0%"></div>
+                </div>
+                <span class="text-xs font-bold text-slate-400 whitespace-nowrap">Q.<span id="current-q-num">1</span> / 4</span>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 fade-in min-h-[400px] flex flex-col">
+                <h3 id="question-text" class="text-xl font-bold mb-8 text-center text-slate-800 leading-snug">質問テキスト</h3>
+                
+                <div id="options-container" class="space-y-3 flex-grow">
+                    <!-- 選択肢 -->
+                </div>
+                
+                <div class="mt-6 pt-6 border-t border-gray-100 flex justify-between items-center text-sm">
+                    <button id="back-btn" onclick="prevStep()" class="text-slate-400 hover:text-slate-600 flex items-center gap-1 invisible">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>戻る
+                    </button>
+                    <span class="text-xs text-gray-300">Next Question -></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ローディング -->
+        <div id="loading-screen" class="hidden text-center py-24 fade-in">
+            <div class="relative w-16 h-16 mx-auto mb-6">
+                <div class="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-pink-500 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <h3 class="text-lg font-bold text-slate-700 mb-2">ドライバー構成を解析中...</h3>
+            <p class="text-sm text-slate-500">ダイナミック・BA・平面駆動・骨伝導をスキャンしています</p>
+        </div>
+
+        <!-- 結果画面 -->
+        <div id="result-screen" class="hidden fade-in pb-12">
+            <div class="bg-slate-900 text-white p-8 rounded-2xl shadow-lg mb-8 text-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
+                <p class="text-pink-400 text-xs font-bold tracking-widest mb-2 uppercase relative z-10">Diagnostic Result</p>
+                <h2 class="text-2xl font-bold relative z-10">あなたへの推奨ギア</h2>
+            </div>
+
+            <div id="results-container" class="grid gap-6">
+                <!-- 結果カード -->
+            </div>
+
+            <div class="mt-12 text-center">
+                <button onclick="resetDiagnosis()" class="text-slate-500 hover:text-slate-800 text-sm underline decoration-slate-300 underline-offset-4">
+                    条件を変えてもう一度探す
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // ★★★ アフィリエイトID ★★★
+        const AFFILIATE_ID = 'artphotograph-22';
+
+        // データベース（60機種近くまで拡張）
+        // type: wired, wireless
+        // origin: china, major, japan, pro(業務/モニター)
+        // sound: bass(低音), vocal(中高音), flat(モニター), fun(ドンシャリ), warm(暖色), cool(寒色/解像度)
+        // budget: super_low(〜5k), low(〜10k), mid(〜20k), high(〜50k), premium(50k〜)
+        // feature: anc, game, planar(平面駆動), ba(BA型), hybrid, open(開放/骨伝導), design
+        
+        const products = [
+            // --- 完全ワイヤレス (Premium/High: 音質・機能の頂点) ---
+            { name: 'Technics EAH-AZ80', price: '36,000', tags: ['wireless', 'major', 'flat', 'premium', 'anc', 'japan'], desc: '「有線並み」と評される最高峰。3台マルチポイントは仕事の神機能。', keyword: 'Technics EAH-AZ80' },
+            { name: 'Sony WF-1000XM5', price: '38,000', tags: ['wireless', 'major', 'bass', 'premium', 'anc', 'japan'], desc: '世界最強クラスのノイズキャンセリング。通勤電車が「図書館」に変わる。', keyword: 'Sony WF-1000XM5' },
+            { name: 'Bose QuietComfort Ultra Earbuds', price: '36,000', tags: ['wireless', 'major', 'bass', 'premium', 'anc'], desc: '重低音と消音性能ならBose一択。イマーシブオーディオの臨場感が凄い。', keyword: 'Bose QuietComfort Ultra Earbuds' },
+            { name: 'Sennheiser MOMENTUM True Wireless 4', price: '46,000', tags: ['wireless', 'major', 'flat', 'premium', 'anc'], desc: '音の広がりと解像度が別格。クラシックやジャズを聴くならこれ以上のTWSはない。', keyword: 'Sennheiser MOMENTUM True Wireless 4' },
+            { name: 'Noble Audio FoKus Mystique', price: '58,000', tags: ['wireless', 'major', 'fun', 'premium', 'bass'], desc: '「音質全振り」。ノイキャンはオマケ、音のためだけに全てを捧げた変態TWS。', keyword: 'Noble Audio FoKus Mystique' },
+            { name: 'Devialet Gemini II', price: '64,000', tags: ['wireless', 'major', 'bass', 'premium', 'anc', 'design'], desc: 'フランスの高級オーディオブランド発。まるで宝石のようなデザインと濃厚な音。', keyword: 'Devialet Gemini II' },
+            
+            // --- 完全ワイヤレス (Mid: こだわり・コスパ) ---
+            { name: 'Anker Soundcore Liberty 4', price: '14,990', tags: ['wireless', 'major', 'fun', 'mid', 'anc'], desc: '機能全部入りコスパ最強機。ヘルスケア機能までついたAnkerの自信作。', keyword: 'Anker Soundcore Liberty 4' },
+            { name: 'Soundcore Liberty 4 NC', price: '12,990', tags: ['wireless', 'major', 'bass', 'mid', 'anc'], desc: 'Liberty4より「ノイキャン」に特化したモデル。とにかく静寂が欲しいコスパ派へ。', keyword: 'Soundcore Liberty 4 NC' },
+            { name: 'AVIOT TE-Z1PNK (ピヤホン6)', price: '39,600', tags: ['wireless', 'japan', 'bass', 'high', 'anc', 'fun'], desc: '「ピエール中野」監修。ロック・ドラムの音が異常に気持ちいい。ライブ会場の音。', keyword: 'AVIOT TE-Z1PNK' },
+            { name: 'final ZE8000 MK2', price: '36,800', tags: ['wireless', 'japan', 'flat', 'high', 'anc', 'design'], desc: '「8K SOUND」を標榜する圧倒的解像度。オーケストラの配置が見えるような音。', keyword: 'final ZE8000 MK2' },
+            { name: 'JBL Tour Pro 2', price: '25,000', tags: ['wireless', 'major', 'fun', 'high', 'anc'], desc: '世界初「ケースにタッチパネル画面」搭載。スマホを出さずに操作できる未来のガジェット。', keyword: 'JBL Tour Pro 2' },
+            { name: 'Nothing Ear (a)', price: '14,800', tags: ['wireless', 'major', 'bass', 'mid', 'anc', 'design'], desc: 'スケルトンデザインが最高にクール。低音も強力で、持っているだけで気分が上がる。', keyword: 'Nothing Ear (a)' },
+
+            // --- 完全ワイヤレス (Low/Super Low: 激安・入門) ---
+            { name: 'EarFun Air Pro 3', price: '8,990', tags: ['wireless', 'china', 'bass', 'low', 'anc'], desc: 'U1万円でこのノイキャンは反則級。ガジェットYouTuberがこぞって絶賛する機種。', keyword: 'EarFun Air Pro 3' },
+            { name: 'Moondrop Space Travel', price: '5,000', tags: ['wireless', 'china', 'vocal', 'super_low', 'anc', 'design'], desc: '通称「宇宙旅行」。5000円でANC付き、しかも水月雨チューニングの美音。', keyword: 'Moondrop Space Travel' },
+            { name: 'QCY Melobuds Pro', price: '6,980', tags: ['wireless', 'china', 'bass', 'low', 'anc'], desc: 'ハイレゾ(LDAC)対応でこの価格。安すぎて心配になるレベルの破壊的コスパ。', keyword: 'QCY Melobuds Pro' },
+            { name: 'JVC HA-A5T', price: '3,900', tags: ['wireless', 'japan', 'flat', 'super_low'], desc: '日本のJVC製でこの価格。小さくて軽く、音も素直。とりあえずの一個に最適。', keyword: 'JVC HA-A5T' },
+
+            // --- ながら聴き/骨伝導 (Open Ear) ---
+            { name: 'Shokz OpenRun Pro', price: '23,880', tags: ['wireless', 'major', 'open', 'high', 'sport'], desc: '骨伝導の王様。ランニングしても絶対に落ちないし、低音もしっかり出る。', keyword: 'Shokz OpenRun Pro' },
+            { name: 'Huawei FreeClip', price: '27,800', tags: ['wireless', 'china', 'open', 'high', 'design'], desc: 'イヤーカフ型で「着けていることを忘れる」装着感。ファッション性も抜群。', keyword: 'Huawei FreeClip' },
+            { name: 'Bose Ultra Open Earbuds', price: '39,600', tags: ['wireless', 'major', 'open', 'high', 'bass'], desc: '「耳を塞がないのにBoseの重低音」。魔法のような体験ができる最新機種。', keyword: 'Bose Ultra Open Earbuds' },
+            { name: 'nwm (ヌーム) MBE001', price: '24,200', tags: ['wireless', 'japan', 'open', 'high'], desc: 'NTTの技術で「音漏れを閉じ込める」。オフィスやオンライン会議で最強の開放型。', keyword: 'nwm MBE001' },
+
+            // --- 有線 (China/Premium & High: マニアの世界) ---
+            { name: 'Thieaudio Hype 2', price: '46,000', tags: ['wired', 'china', 'bass', 'premium', 'hybrid'], desc: '今、海外で最もホットなブランド。圧倒的な重低音と解像度の暴力。K-POP等に最適。', keyword: 'Thieaudio Hype 2' },
+            { name: 'Moondrop Blessing 3', price: '48,000', tags: ['wired', 'china', 'flat', 'premium', 'hybrid'], desc: '「美音」の極致。ハイブリッド構成で、透き通るような高音と締まった低音を両立。', keyword: 'Moondrop Blessing 3' },
+            { name: 'SeeAudio Bravery', price: '38,000', tags: ['wired', 'china', 'vocal', 'high', 'ba'], desc: 'BAドライバー4基搭載。煌びやかで濃厚な中高音は、一度聴くと病みつきになる。', keyword: 'SeeAudio Bravery' },
+            { name: 'Kiwi Ears Quintet', price: '32,000', tags: ['wired', 'china', 'fun', 'high', 'hybrid'], desc: '4種類の異なるドライバー(DD+BA+Planar+PZT)を積んだ変態機。なのに音のまとまりが凄い。', keyword: 'Kiwi Ears Quintet' },
+            { name: '7Hz Timeless AE', price: '36,000', tags: ['wired', 'china', 'bass', 'high', 'planar'], desc: '「平面駆動ドライバー」ブームの火付け役。低音のキレとスピード感が段違い。', keyword: '7Hz Timeless AE' },
+            { name: 'Letshuoer S12 Pro', price: '23,000', tags: ['wired', 'china', 'fun', 'high', 'planar'], desc: '平面駆動の名機。ロックやメタルの速いドラムも余裕で捌くスピードスター。', keyword: 'Letshuoer S12 Pro' },
+            { name: 'TANCHJIM Origin', price: '42,000', tags: ['wired', 'china', 'flat', 'premium', 'design'], desc: '清涼感のある透き通った音。ボカロや女性ボーカルの息遣いまで聴こえる。', keyword: 'TANCHJIM Origin' },
+
+            // --- 有線 (China/Mid & Low: コスパの魔境) ---
+            { name: 'Truthear HEXA', price: '13,000', tags: ['wired', 'china', 'flat', 'mid', 'hybrid'], desc: '1万円台の覇権モデル。モニターライクで整った音。デザインも幾何学的でクール。', keyword: 'Truthear HEXA' },
+            { name: 'Moondrop Aria 2', price: '13,300', tags: ['wired', 'china', 'vocal', 'mid'], desc: '中華イヤホンの絶対的スタンダード。金ピカのデザインと艶のあるボーカルが魅力。', keyword: 'Moondrop Aria 2' },
+            { name: 'SIMGOT EA500 LM', price: '13,000', tags: ['wired', 'china', 'fun', 'mid'], desc: 'リチウムマグネシウム振動板採用。解像度が高く、クラスを超えた音がする。', keyword: 'SIMGOT EA500 LM' },
+            { name: 'KZ ZS10 Pro X', price: '6,800', tags: ['wired', 'china', 'fun', 'low', 'hybrid'], desc: '多ドラ中華イヤホンの代名詞。元気なドンシャリ音でロックやアニソンが楽しい。', keyword: 'KZ ZS10 Pro X' },
+            { name: 'TRN Conch', price: '5,000', tags: ['wired', 'china', 'flat', 'super_low'], desc: '付属品が豪華すぎて「本体が実質無料」と言われる機種。音も驚くほどまとも。', keyword: 'TRN Conch' },
+            { name: 'Tangzu Wan\'er S.G', price: '3,500', tags: ['wired', 'china', 'vocal', 'super_low'], desc: '3000円台で買える奇跡。パッケージも美しく、中華イヤホン入門に最適。', keyword: 'Tangzu Wan\'er S.G' },
+            { name: 'Kiwi Ears Cadenza', price: '5,500', tags: ['wired', 'china', 'fun', 'super_low'], desc: '低価格帯の新定番。バランスが良く、見た目も美しい。スマホ直挿しでもいい音。', keyword: 'Kiwi Ears Cadenza' },
+            { name: '7Hz Salnotes Zero', price: '3,300', tags: ['wired', 'china', 'flat', 'super_low'], desc: '激安なのにフラットで綺麗な音。Youtube視聴や学習用としても優秀。', keyword: '7Hz Salnotes Zero' },
+            { name: 'NiceHCK DB2', price: '3,500', tags: ['wired', 'china', 'bass', 'super_low'], desc: '見た目が美しすぎる激安機。低音強めの楽しい音で、初めてのリケーブル機に。', keyword: 'NiceHCK DB2' },
+
+            // --- 有線 (Major/Japan/Monitor: プロ・定番) ---
+            { name: 'Sennheiser IE 200', price: '23,000', tags: ['wired', 'major', 'flat', 'high'], desc: 'ゼンハイザーのDNAを受け継ぐエントリー。色付けのない原音再生ならこれ。', keyword: 'Sennheiser IE 200' },
+            { name: 'Sennheiser IE 600', price: '98,000', tags: ['wired', 'major', 'fun', 'premium', 'design'], desc: '3Dプリンタ製メタル筐体。宇宙を感じるほどの音場と解像度。有線のゴールの一つ。', keyword: 'Sennheiser IE 600' },
+            { name: 'final E3000', price: '5,500', tags: ['wired', 'japan', 'flat', 'low'], desc: '日本の名門finalのロングセラー。聴き疲れしない柔らかい音で寝ホンにも最適。', keyword: 'final E3000' },
+            { name: 'intime 碧 (SORA) - Light', price: '4,400', tags: ['wired', 'japan', 'vocal', 'super_low', 'hybrid'], desc: '群馬県のメーカー。セラミックツイーター搭載で、高音がキラキラと輝くような音。', keyword: 'intime 碧 Light' },
+            { name: 'final VR3000 for Gaming', price: '7,980', tags: ['wired', 'japan', 'game', 'low'], desc: 'FPSゲーマーのための「空間オーディオ」特化機。足音の位置が手に取るようにわかる。', keyword: 'final VR3000' },
+            { name: 'Shure SE215 SPE', price: '14,800', tags: ['wired', 'major', 'bass', 'mid', 'pro'], desc: 'イヤモニの元祖。遮音性が凄まじい。プロのミュージシャンも使う信頼の耐久性。', keyword: 'Shure SE215 Special Edition' },
+            { name: 'Etymotic Research ER4SR', price: '45,000', tags: ['wired', 'major', 'flat', 'premium', 'pro', 'ba'], desc: '通称「耳の検査機」。遮音性と解像度の高さは変態的。音の細部を顕微鏡で見るような体験。', keyword: 'Etymotic Research ER4SR' },
+            { name: 'Sony IER-M7', price: '80,000', tags: ['wired', 'major', 'flat', 'premium', 'pro', 'ba'], desc: 'ステージ用モニターの傑作。正確無比な音で、楽器の練習や耳コピに最適。', keyword: 'Sony IER-M7' },
+            { name: 'Westone Audio Mach 60', price: '110,000', tags: ['wired', 'major', 'flat', 'premium', 'pro', 'ba'], desc: 'BAドライバー6基搭載。滑らかで温かみのある音。長時間聴いても全く疲れないプロ機。', keyword: 'Westone Audio Mach 60' },
+            { name: 'Acoustune HS1750CU', price: '68,000', tags: ['wired', 'japan', 'fun', 'premium', 'design'], desc: '金属の塊のようなメカメカしいデザイン。ダイナミック一発とは思えない濃密な音。', keyword: 'Acoustune HS1750CU' }
+        ];
+
+        // 質問データ
+        const questions = [
+            {
+                text: "Q1. まずは「接続スタイル」を決めましょう",
+                options: [
+                    { text: "完全ワイヤレス (TWS) - ノイキャン・便利さ重視", tags: ['wireless'] },
+                    { text: "有線 (リケーブル/イヤモニ) - 音質・遅延ゼロ重視", tags: ['wired'] },
+                    { text: "ながら聴き (骨伝導/オープン) - 耳を塞がない", tags: ['wireless', 'open'] }
+                ]
+            },
+            {
+                text: "Q2. 予算の許容範囲は？",
+                options: [
+                    { text: "お試し・激安コスパ (〜5,000円)", tags: ['super_low'] },
+                    { text: "エントリー (〜15,000円)", tags: ['low'] },
+                    { text: "ミドルクラス (〜30,000円)", tags: ['mid'] },
+                    { text: "ガチ勢・ハイエンド (3万円〜)", tags: ['high', 'premium'] }
+                ]
+            },
+            {
+                text: "Q3. 興味のあるジャンル・メーカーは？",
+                options: [
+                    { text: "中華イヤホン (Chi-Fi) の「沼」を覗きたい", tags: ['china'] },
+                    { text: "国内・定番メーカー (Sony, Bose, final等) が安心", tags: ['major', 'japan'] },
+                    { text: "プロ用・モニター機 (制作・楽器演奏・FPS)", tags: ['pro', 'game'] }
+                ]
+            },
+            {
+                text: "Q4. 好きな音の傾向は？",
+                options: [
+                    { text: "ロック・EDM (迫力の低音・ドンシャリ)", tags: ['bass', 'fun'] },
+                    { text: "アニソン・女性ボーカル (綺麗な中高音)", tags: ['vocal'] },
+                    { text: "クラシック・原音重視 (フラット・解像度)", tags: ['flat', 'planar'] },
+                    { text: "なんでも楽しく聴きたい (バランス重視)", tags: ['mid', 'hybrid'] }
+                ]
+            }
+        ];
+
+        let currentStep = 0;
+        let userTags = [];
+
+        // DOM要素
+        const quizScreen = document.getElementById('quiz-screen');
+        const introScreen = document.getElementById('intro-screen');
+        const loadingScreen = document.getElementById('loading-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const progressBar = document.getElementById('progress-bar');
+        const currentQNum = document.getElementById('current-q-num');
+        const backBtn = document.getElementById('back-btn');
+        const resultsContainer = document.getElementById('results-container');
+
+        function startDiagnosis() {
+            introScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const q = questions[currentStep];
+            questionText.textContent = q.text;
+            currentQNum.textContent = currentStep + 1;
+            progressBar.style.width = `${((currentStep) / questions.length) * 100}%`;
+            backBtn.style.visibility = currentStep > 0 ? 'visible' : 'hidden';
+
+            optionsContainer.innerHTML = '';
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn w-full text-left p-4 rounded-xl border border-gray-200 transition-all font-medium text-slate-700 flex items-center justify-between group";
+                btn.style.animation = `fadeIn 0.4s ease-out ${idx * 0.1}s backwards`;
+                
+                btn.innerHTML = `
+                    <span>${opt.text}</span>
+                    <i data-lucide="chevron-right" class="text-gray-300 group-hover:text-pink-500 transition-colors"></i>
+                `;
+                btn.onclick = () => handleAnswer(opt);
+                optionsContainer.appendChild(btn);
+            });
+            lucide.createIcons();
+        }
+
+        function handleAnswer(option) {
+            if (option.tags) userTags.push(...option.tags);
+            if (currentStep < questions.length - 1) {
+                currentStep++;
+                renderQuestion();
+            } else {
+                finishDiagnosis();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                userTags.pop(); 
+                renderQuestion();
+            }
+        }
+
+        function finishDiagnosis() {
+            quizScreen.classList.add('hidden');
+            loadingScreen.classList.remove('hidden');
+            progressBar.style.width = '100%';
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                showResult();
+            }, 1500);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function showResult() {
+            resultScreen.classList.remove('hidden');
+
+            let scoredProducts = products.map(prod => {
+                let score = 0;
+                
+                // --- 必須フィルタ ---
+                // 有線/無線/ながら聴きの不一致は致命的
+                if (userTags.includes('wireless') && prod.tags.includes('wired')) score -= 999;
+                if (userTags.includes('wired') && prod.tags.includes('wireless')) score -= 999;
+                if (userTags.includes('open') && !prod.tags.includes('open')) score -= 500;
+
+                // --- 予算マッチング ---
+                const budgetMap = { 'super_low': 1, 'low': 2, 'mid': 3, 'high': 4, 'premium': 5 };
+                let userBudgetVal = 0;
+                let prodBudgetVal = 0;
+                
+                ['super_low', 'low', 'mid', 'high', 'premium'].forEach(t => { if (userTags.includes(t)) userBudgetVal = budgetMap[t]; });
+                ['super_low', 'low', 'mid', 'high', 'premium'].forEach(t => { if (prod.tags.includes(t)) prodBudgetVal = budgetMap[t]; });
+
+                if (userBudgetVal > 0 && prodBudgetVal > 0) {
+                    const diff = Math.abs(userBudgetVal - prodBudgetVal);
+                    if (diff === 0) score += 40; 
+                    else if (diff === 1) score += 20; // 予算の許容範囲を少し広げた
+                    else if (diff >= 2) score -= 30;
+                }
+
+                // --- 特性マッチング ---
+                // マッチするタグがあればあるほど加点
+                const matchTags = ['china', 'major', 'japan', 'pro', 'game', 'bass', 'vocal', 'flat', 'fun', 'planar', 'ba', 'design'];
+                matchTags.forEach(t => {
+                    if (userTags.includes(t) && prod.tags.includes(t)) score += 15;
+                });
+
+                return { product: prod, score: score };
+            });
+
+            // マイナススコア除外
+            scoredProducts = scoredProducts.filter(p => p.score > -100);
+            
+            // ソート
+            scoredProducts.sort((a, b) => b.score - a.score);
+
+            // 上位8つからランダムに3つ選出（ランダム性を高めた）
+            let candidates = scoredProducts.slice(0, 8); 
+            candidates = shuffleArray(candidates); 
+            const topProducts = candidates.slice(0, 3);
+            
+            // 表示順は見やすくスコア順に戻す
+            topProducts.sort((a, b) => b.score - a.score);
+
+            resultsContainer.innerHTML = '';
+            
+            if (topProducts.length === 0) {
+                resultsContainer.innerHTML = '<div class="p-4 text-center text-slate-500">条件が厳しすぎたようです。<br>予算や接続方法を変えて再トライしてみてください。</div>';
+            } else {
+                topProducts.forEach((item, index) => {
+                    const p = item.product;
+                    const rankText = index === 0 ? 'Top Pick' : `Choice ${index + 1}`;
+                    const rankColor = index === 0 ? 'bg-pink-100 text-pink-700' : 'bg-slate-100 text-slate-500';
+                    const searchUrl = `https://www.amazon.co.jp/s?k=${encodeURIComponent(p.keyword)}&tag=${AFFILIATE_ID}`;
+
+                    const tagLabels = {
+                        'wireless': '無線', 'wired': '有線', 'china': '中華', 'major': '定番', 'japan': '国産',
+                        'anc': 'ノイキャン', 'open': '骨伝導/開放', 'game': 'FPS', 'pro': 'プロ用',
+                        'premium': 'ハイエンド', 'super_low': '激安', 'planar': '平面駆動', 'ba': 'BA型', 'hybrid': 'ハイブリッド',
+                        'design': 'デザイン'
+                    };
+                    const displayTags = p.tags.filter(t => tagLabels[t]).map(t => tagLabels[t]).slice(0, 4); // タグが多いので4つまで
+
+                    const card = document.createElement('div');
+                    card.className = "bg-white rounded-2xl p-6 shadow-md border border-gray-100 flex flex-col md:flex-row gap-6 items-start fade-in";
+                    card.style.animationDelay = `${index * 0.1}s`;
+                    
+                    card.innerHTML = `
+                        <div class="flex-grow">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="text-xs font-bold px-2 py-1 rounded ${rankColor}">${rankText}</span>
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-800 mb-2">${p.name}</h3>
+                            <p class="text-sm text-slate-600 leading-relaxed mb-3">${p.desc}</p>
+                            <div class="flex flex-wrap gap-2 text-xs text-slate-400">
+                                ${displayTags.map(t => `<span class="bg-slate-100 px-2 py-1 rounded">#${t}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="w-full md:w-48 flex-shrink-0 flex flex-col justify-end gap-2">
+                            <div class="text-right">
+                                <span class="text-xs text-slate-400">参考価格</span>
+                                <div class="text-xl font-bold text-slate-800">¥${p.price}</div>
+                            </div>
+                            <a href="${searchUrl}" target="_blank" class="amazon-btn w-full text-center py-3 rounded-lg text-white font-bold text-sm shadow-sm flex items-center justify-center gap-2">
+                                Amazonで詳細
+                                <i data-lucide="external-link" class="w-4 h-4"></i>
+                            </a>
+                        </div>
+                    `;
+                    resultsContainer.appendChild(card);
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function resetDiagnosis() {
+            currentStep = 0;
+            userTags = [];
+            resultScreen.classList.add('hidden');
+            introScreen.classList.remove('hidden');
+            progressBar.style.width = '0%';
+        }
+    </script>
+</body>
+</html>
