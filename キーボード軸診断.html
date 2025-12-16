@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>運命のキーボード診断</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Noto Sans JP', sans-serif; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .amazon-btn {
+            background: #FF9900;
+            transition: all 0.2s;
+        }
+        .amazon-btn:hover {
+            background: #FFB84D;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(255, 153, 0, 0.3);
+        }
+        .option-btn:hover {
+            border-color: #f97316; /* orange-500 */
+            background-color: #fff7ed; /* orange-50 */
+        }
+        .option-btn.selected {
+            border-color: #f97316;
+            background-color: #ffedd5;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800 min-h-screen flex flex-col">
+
+    <header class="bg-white border-b border-stone-200 sticky top-0 z-50">
+        <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+            <h1 class="text-base font-bold flex items-center gap-2 text-stone-700">
+                <i data-lucide="keyboard" class="w-5 h-5 text-orange-600"></i>
+                <span>Keyboard Switch <span class="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded ml-1">Finder</span></span>
+            </h1>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-3xl mx-auto px-4 py-8 w-full">
+        
+        <!-- スタート画面 -->
+        <div id="intro-screen" class="bg-white rounded-2xl shadow-sm border border-stone-200 p-8 text-center mt-4">
+            <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 text-orange-600">
+                <i data-lucide="zap" class="w-8 h-8"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-3 text-stone-800">「打鍵感」の沼へようこそ<br>あなたに合うスイッチは？</h2>
+            <p class="text-stone-500 mb-8 text-sm leading-relaxed">
+                赤軸、青軸、茶軸、静電容量無接点...<br>
+                キーボードの打ち心地は千差万別。<br>
+                あなたの好みや環境から「運命の軸」を導き出します。
+            </p>
+            <button onclick="startDiagnosis()" class="w-full sm:w-auto bg-stone-800 hover:bg-stone-700 text-white font-bold py-4 px-12 rounded-xl shadow-lg transition-transform transform hover:-translate-y-1 flex items-center justify-center gap-2 mx-auto">
+                <span>診断を始める</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <!-- 質問画面 -->
+        <div id="quiz-screen" class="hidden mt-4">
+            <div class="flex items-center gap-4 mb-6 px-1">
+                <div class="flex-grow h-2 bg-stone-200 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="h-full bg-orange-500 transition-all duration-500 ease-out" style="width: 0%"></div>
+                </div>
+                <span class="text-xs font-bold text-stone-400 whitespace-nowrap">Q.<span id="current-q-num">1</span> / 4</span>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 fade-in min-h-[400px] flex flex-col">
+                <h3 id="question-text" class="text-xl font-bold mb-8 text-center text-stone-800 leading-snug">質問テキスト</h3>
+                
+                <div id="options-container" class="space-y-3 flex-grow">
+                    <!-- 選択肢 -->
+                </div>
+                
+                <div class="mt-6 pt-6 border-t border-stone-100 flex justify-between items-center text-sm">
+                    <button id="back-btn" onclick="prevStep()" class="text-stone-400 hover:text-stone-600 flex items-center gap-1 invisible">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>戻る
+                    </button>
+                    <span class="text-xs text-stone-300">Next Question -></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ローディング -->
+        <div id="loading-screen" class="hidden text-center py-24 fade-in">
+            <div class="relative w-16 h-16 mx-auto mb-6">
+                <div class="absolute inset-0 border-4 border-stone-200 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-orange-500 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <h3 class="text-lg font-bold text-stone-700 mb-2">打鍵音をシミュレーション中...</h3>
+            <p class="text-sm text-stone-500">職場環境・指の重さを考慮しています</p>
+        </div>
+
+        <!-- 結果画面 -->
+        <div id="result-screen" class="hidden fade-in pb-12">
+            <div class="bg-stone-800 text-white p-8 rounded-2xl shadow-lg mb-8 text-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/asfalt-dark.png')] opacity-30"></div>
+                <p class="text-orange-400 text-xs font-bold tracking-widest mb-2 uppercase relative z-10">Your Perfect Match</p>
+                <h2 class="text-2xl font-bold relative z-10">あなたにおすすめのキーボード</h2>
+            </div>
+
+            <div id="results-container" class="grid gap-6">
+                <!-- 結果カード -->
+            </div>
+
+            <div class="mt-12 text-center">
+                <button onclick="resetDiagnosis()" class="text-stone-500 hover:text-stone-800 text-sm underline decoration-stone-300 underline-offset-4">
+                    もう一度最初から診断する
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // ★★★ アフィリエイトID ★★★
+        const AFFILIATE_ID = 'artphotograph-22';
+
+        // キーボードデータ
+        // switch: red(赤), blue(青), brown(茶), topre(静電容量), mag(磁気/ラピトリ), low(ロープロ)
+        // use: game, work, code
+        const products = [
+            {
+                name: 'HHKB Professional HYBRID Type-S',
+                price: '36,850',
+                switchName: '静電容量無接点方式 (静音)',
+                desc: '「スコスコ」という極上の打鍵感。一度使うと他のキーボードに戻れない中毒性があります。プログラマー・ライターの到達点。',
+                tags: ['topre', 'code', 'work', 'quiet'],
+                keyword: 'HHKB Professional HYBRID Type-S',
+                badge: '至高の打鍵感'
+            },
+            {
+                name: 'REALFORCE R3 キーボード',
+                price: '34,980',
+                switchName: '静電容量無接点方式',
+                desc: '日本製の質実剛健な作り。フェザータッチと呼ばれる軽い打ち心地で、腱鞘炎予防にも最適。オフィスでの使用にベストマッチ。',
+                tags: ['topre', 'work', 'code', 'quiet'],
+                keyword: 'REALFORCE R3',
+                badge: '疲れ知らず'
+            },
+            {
+                name: 'Keychron K2 Pro',
+                price: '18,900',
+                switchName: '赤軸 / 茶軸',
+                desc: 'Macユーザーに大人気のメカニカル。Win/Mac切り替えスイッチ付き。ホットスワップ対応で後から軸の交換も楽しめます。',
+                tags: ['red', 'brown', 'mac', 'code', 'work'],
+                keyword: 'Keychron K2 Pro',
+                badge: 'Mac対応の定番'
+            },
+            {
+                name: 'Wooting 60HE+',
+                price: '36,000',
+                switchName: '磁気スイッチ (ラピッドトリガー)',
+                desc: 'FPSゲーマーの「神器」。キーを離した瞬間に反応が止まるラピッドトリガー機能搭載。VALORANTなどの撃ち合いで圧倒的有利に。',
+                tags: ['mag', 'game', 'linear'],
+                keyword: 'Wooting 60HE',
+                badge: 'FPS最強'
+            },
+            {
+                name: 'Logicool G PRO X TKL',
+                price: '22,900',
+                switchName: 'タクタイル (茶軸相当)',
+                desc: 'ゲーミング性能と打ち心地のバランスが良い万能機。ゲームも仕事もこれ一台でこなしたい人に最適。信頼のLIGHTSPEED無線技術。',
+                tags: ['brown', 'game', 'work'],
+                keyword: 'Logicool G PRO X TKL',
+                badge: 'ゲーム＆仕事'
+            },
+            {
+                name: 'Logicool MX Mechanical',
+                price: '21,700',
+                switchName: 'ロープロファイル (茶軸)',
+                desc: '薄型で手首への負担が少ないメカニカル。ノートPCのキーボードに慣れている人でも違和感なく移行できます。電池持ちも最強。',
+                tags: ['low', 'work', 'code', 'office'],
+                keyword: 'Logicool MX Mechanical',
+                badge: '薄型・高機能'
+            },
+            {
+                name: 'Filco Majestouch 3',
+                price: '19,800',
+                switchName: '青軸 (クリッキー)',
+                desc: '「カチャカチャ」という爽快なクリック音が特徴。打っている感覚が強く、自宅で一人で作業する際のリズム作りに最高です。',
+                tags: ['blue', 'code', 'clicky'],
+                keyword: 'Filco Majestouch 3 青軸',
+                badge: '爽快な打鍵音'
+            }
+        ];
+
+        // 質問データ
+        const questions = [
+            {
+                text: "Q1. 主な使用目的は？",
+                options: [
+                    { text: "ひたすら文字入力 (仕事・執筆・プログラミング)", tags: ['work', 'code'] },
+                    { text: "FPSなどの対戦ゲームをガチりたい", tags: ['game', 'mag'] },
+                    { text: "ゲームも仕事も両方同じくらい", tags: ['game', 'work'] }
+                ]
+            },
+            {
+                text: "Q2. 打鍵音（キーを打つ音）の環境は？",
+                options: [
+                    { text: "静かなオフィスやカフェで使う (静音重視)", tags: ['quiet', 'topre'] },
+                    { text: "自宅なので多少音がしてもOK (打鍵感重視)", tags: ['brown', 'red'] },
+                    { text: "カチャカチャ音を鳴らしてリズムに乗りたい", tags: ['blue', 'clicky'] }
+                ]
+            },
+            {
+                text: "Q3. 指先の感触（タクタイル感）の好みは？",
+                options: [
+                    { text: "スイッチ感のない、スッと沈む軽い感じ (リニア)", tags: ['red', 'mag', 'linear'] },
+                    { text: "押した時に「コクッ」という確かな感触が欲しい (タクタイル)", tags: ['brown', 'topre'] },
+                    { text: "ノートPCのような薄いキーボードに慣れている", tags: ['low'] }
+                ]
+            },
+            {
+                text: "Q4. 使っているOSは？",
+                options: [
+                    { text: "Mac (MacBookなど)", tags: ['mac'] },
+                    { text: "Windows", tags: [] } // Windowsは全機種対応なのでタグなし
+                ]
+            }
+        ];
+
+        // ------------------------------------------
+        // ロジック
+        // ------------------------------------------
+
+        let currentStep = 0;
+        let userTags = [];
+
+        const quizScreen = document.getElementById('quiz-screen');
+        const introScreen = document.getElementById('intro-screen');
+        const loadingScreen = document.getElementById('loading-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const progressBar = document.getElementById('progress-bar');
+        const currentQNum = document.getElementById('current-q-num');
+        const backBtn = document.getElementById('back-btn');
+        const resultsContainer = document.getElementById('results-container');
+
+        function startDiagnosis() {
+            introScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const q = questions[currentStep];
+            questionText.textContent = q.text;
+            currentQNum.textContent = currentStep + 1;
+            progressBar.style.width = `${((currentStep) / questions.length) * 100}%`;
+            backBtn.style.visibility = currentStep > 0 ? 'visible' : 'hidden';
+
+            optionsContainer.innerHTML = '';
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn w-full text-left p-4 rounded-xl border border-stone-200 transition-all font-medium text-stone-700 flex items-center justify-between group";
+                btn.style.animation = `fadeIn 0.4s ease-out ${idx * 0.1}s backwards`;
+                
+                btn.innerHTML = `
+                    <span>${opt.text}</span>
+                    <i data-lucide="chevron-right" class="text-stone-300 group-hover:text-orange-500 transition-colors"></i>
+                `;
+                btn.onclick = () => handleAnswer(opt);
+                optionsContainer.appendChild(btn);
+            });
+            lucide.createIcons();
+        }
+
+        function handleAnswer(option) {
+            if (option.tags) userTags.push(...option.tags);
+
+            if (currentStep < questions.length - 1) {
+                currentStep++;
+                renderQuestion();
+            } else {
+                finishDiagnosis();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                userTags.pop(); 
+                renderQuestion();
+            }
+        }
+
+        function finishDiagnosis() {
+            quizScreen.classList.add('hidden');
+            loadingScreen.classList.remove('hidden');
+            progressBar.style.width = '100%';
+
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                showResult();
+            }, 2000);
+        }
+
+        function showResult() {
+            resultScreen.classList.remove('hidden');
+
+            const scoredProducts = products.map(prod => {
+                let score = 0;
+                
+                // 1. マッチングロジック
+                // 持っているタグが一致するごとに加点
+                prod.tags.forEach(tag => {
+                    if (userTags.includes(tag)) score += 5;
+                });
+
+                // 2. クリティカルな条件の処理
+                
+                // 静音重視なのに青軸(clicky)は除外
+                if (userTags.includes('quiet') && prod.tags.includes('clicky')) {
+                    score -= 50;
+                }
+                
+                // ガチゲーマー(mag/rapid trigger)には磁気スイッチを猛プッシュ
+                if (userTags.includes('mag') && prod.tags.includes('mag')) {
+                    score += 20;
+                }
+
+                // MacユーザーにはMac対応キー配列(Keychron, HHKB, MX Keys)を優遇
+                // ※HHKB, Realforce, LogicoolはMac対応しているが、Keychronはキーキャップ付きで特に親和性が高い
+                if (userTags.includes('mac')) {
+                    if (prod.tags.includes('mac')) score += 10;
+                    // Windows専用配列に近いものは少し減点（今回は簡易化のため除外）
+                }
+                
+                // ロープロファイル希望
+                if (userTags.includes('low') && prod.tags.includes('low')) {
+                    score += 15;
+                }
+
+                return { product: prod, score: score };
+            });
+
+            // スコア降順ソート
+            scoredProducts.sort((a, b) => b.score - a.score);
+            const topProducts = scoredProducts.filter(p => p.score > 0).slice(0, 3);
+
+            resultsContainer.innerHTML = '';
+            
+            if (topProducts.length === 0) {
+                resultsContainer.innerHTML = '<div class="p-4 text-center text-stone-500">条件に合うキーボードが見つかりませんでした。<br>条件を緩めてもう一度お試しください。</div>';
+            } else {
+                topProducts.forEach((item, index) => {
+                    const p = item.product;
+                    const rankText = index === 0 ? 'Best Match' : `Recommend #${index + 1}`;
+                    const rankColor = index === 0 ? 'bg-orange-100 text-orange-700' : 'bg-stone-200 text-stone-600';
+                    const searchUrl = `https://www.amazon.co.jp/s?k=${encodeURIComponent(p.keyword)}&tag=${AFFILIATE_ID}`;
+
+                    const card = document.createElement('div');
+                    card.className = "bg-white rounded-2xl p-6 shadow-md border border-stone-100 flex flex-col md:flex-row gap-6 items-start";
+                    card.innerHTML = `
+                        <div class="flex-grow">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="text-xs font-bold px-2 py-1 rounded ${rankColor}">${rankText}</span>
+                                <span class="text-xs font-medium text-orange-600 border border-orange-200 px-2 py-1 rounded">${p.badge}</span>
+                            </div>
+                            <h3 class="text-lg font-bold text-stone-800 mb-1">${p.name}</h3>
+                            <p class="text-xs text-stone-400 mb-2 font-mono">スイッチ: ${p.switchName}</p>
+                            <p class="text-sm text-stone-600 leading-relaxed mb-3">${p.desc}</p>
+                        </div>
+                        <div class="w-full md:w-48 flex-shrink-0 flex flex-col justify-end gap-2">
+                            <div class="text-right">
+                                <span class="text-xs text-stone-400">参考価格</span>
+                                <div class="text-xl font-bold text-stone-800">¥${p.price}</div>
+                            </div>
+                            <a href="${searchUrl}" target="_blank" class="amazon-btn w-full text-center py-3 rounded-lg text-white font-bold text-sm shadow-sm flex items-center justify-center gap-2">
+                                Amazonで見る
+                                <i data-lucide="external-link" class="w-4 h-4"></i>
+                            </a>
+                        </div>
+                    `;
+                    resultsContainer.appendChild(card);
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function resetDiagnosis() {
+            currentStep = 0;
+            userTags = [];
+            resultScreen.classList.add('hidden');
+            introScreen.classList.remove('hidden');
+            progressBar.style.width = '0%';
+        }
+    </script>
+</body>
+</html>
