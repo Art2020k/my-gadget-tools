@@ -37,7 +37,7 @@
         <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
             <h1 class="text-base font-bold flex items-center gap-2 text-slate-700">
                 <i data-lucide="keyboard" class="w-5 h-5 text-cyan-600"></i>
-                <span>Left-Hand Device <span class="text-xs text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded ml-1">Navi</span></span>
+                <span>Left-Hand Device <span class="text-xs text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded ml-1">Navi Ver.2</span></span>
             </h1>
         </div>
     </header>
@@ -124,13 +124,11 @@
         const AFFILIATE_ID = 'artphotograph-22';
 
         // 左手デバイスデータ
-        // tags: video(動画), photo(写真), illus(イラスト), general(事務・汎用), stream(配信), 3d(3D・CG)
-        // type: dial(ダイヤル重視), key(キー重視), stick(スティック)
         const products = [
             {
                 name: 'TourBox Elite',
                 price: '39,960',
-                desc: '動画・画像編集の「終着点」。ノブ、スクロール、ダイヤルが絶妙に配置され、タイムライン編集やブラシ調整が爆速化します。Bluetooth対応で配線もスッキリ。',
+                desc: '動画・画像編集の「終着点」。ノブ、スクロール、ダイヤルが絶妙に配置され、タイムライン編集やブラシ調整が爆速化します。',
                 tags: ['video', 'photo', 'illus', 'dial', 'bluetooth'],
                 keyword: 'TourBox Elite',
                 badge: '編集作業の神機'
@@ -138,7 +136,7 @@
             {
                 name: 'TourBox Lite',
                 price: '13,480',
-                desc: 'Eliteの基本機能はそのままに、価格を抑えたコスパモデル。初めての左手デバイスとして最適。USB-C有線接続で安定性抜群。',
+                desc: 'Eliteの基本機能はそのままに、価格を抑えたコスパモデル。USB-C有線接続ですが、機能性は上位機種譲りで動画編集入門に最適。',
                 tags: ['video', 'photo', 'illus', 'dial', 'cospa'],
                 keyword: 'TourBox Lite',
                 badge: '入門ベストバイ'
@@ -179,7 +177,7 @@
                 name: 'Xencelabs Quick Keys',
                 price: '13,980',
                 desc: '有機ELディスプレイ付きで「今どのキーに何を設定したか」が一目瞭然。ペンタブとの相性が良く、イラストレーターに特におすすめ。',
-                tags: ['illus', 'dial', 'key'],
+                tags: ['illus', 'dial', 'key', 'bluetooth'],
                 keyword: 'Xencelabs Quick Keys',
                 badge: '絵師御用達'
             }
@@ -208,15 +206,15 @@
             {
                 text: "Q3. 接続方法や持ち運びのこだわりは？",
                 options: [
-                    { text: "無線(Bluetooth)でデスクをスッキリさせたい", tags: ['bluetooth'] },
-                    { text: "安定の有線接続でOK / 持ち運ばない", tags: ['cospa'] } // 有線OKならコスパモデルも候補に
+                    { text: "無線(Bluetooth)がいい", tags: ['bluetooth'] },
+                    { text: "有線でOK / こだわらない", tags: [] } // タグなし＝ペナルティなし
                 ]
             },
             {
                 text: "Q4. 予算感は？",
                 options: [
                     { text: "まずは安く試してみたい (〜1.5万円)", tags: ['cospa'] },
-                    { text: "高くても生産性が上がるなら投資する (2万円〜)", tags: ['pro'] } // proタグは今回ロジックに使わないが、安物を除外するフィルタに使える
+                    { text: "高くても生産性が上がるなら投資する", tags: ['pro'] } 
                 ]
             }
         ];
@@ -304,39 +302,72 @@
             const scoredProducts = products.map(prod => {
                 let score = 0;
                 
-                prod.tags.forEach(tag => {
-                    if (userTags.includes(tag)) score += 3;
-                    // クリティカルな用途の一致を重くする
-                    if (['video', 'illus', '3d', 'stream'].includes(tag) && userTags.includes(tag)) score += 5;
+                // 1. 基本マッチング（用途）: これを最重視
+                // 用途タグ(video, illus等)が一致したら大きく加点
+                const usageTags = ['video', 'illus', 'photo', 'general', 'stream', '3d', 'game'];
+                usageTags.forEach(tag => {
+                    if (userTags.includes(tag) && prod.tags.includes(tag)) {
+                        score += 15; // 大幅加点
+                    }
                 });
 
-                // 予算フィルタリング（簡易）
-                // ユーザーが「安く試したい(cospa)」を選んでいて、商品にcospaタグがなく価格が2万超えならスコア大幅ダウン
-                if (userTags.includes('cospa') && !prod.tags.includes('cospa') && parseInt(prod.price.replace(/,/g, '')) > 20000) {
-                    score -= 10;
+                // 2. 操作感マッチング (dial, key)
+                const styleTags = ['dial', 'key', 'stick'];
+                styleTags.forEach(tag => {
+                    if (userTags.includes(tag) && prod.tags.includes(tag)) {
+                        score += 5;
+                    }
+                });
+
+                // 3. Bluetooth（無線）の処理を緩和
+                // 以前は「一致しないと大幅減点(-15)」だったのを
+                // 「一致したら加点(+5)、しなくても減点は小さく(-3)」に変更
+                if (userTags.includes('bluetooth')) {
+                    if (prod.tags.includes('bluetooth')) {
+                        score += 5;
+                    } else {
+                        score -= 3; // 減点をマイルドに
+                    }
                 }
-                
-                // Bluetooth必須フィルタ
-                if (userTags.includes('bluetooth') && !prod.tags.includes('bluetooth')) {
-                    score -= 15;
+
+                // 4. 予算の処理を緩和
+                // 「安く済ませたい」人が高いものを見ても除外はしない（減点のみ）
+                if (userTags.includes('cospa')) {
+                    if (prod.tags.includes('cospa')) {
+                        score += 5;
+                    } else {
+                        // コスパモデルじゃない場合
+                        // 価格が高すぎる(2万超え)場合は少し減点
+                        if (parseInt(prod.price.replace(/,/g, '')) > 20000) {
+                            score -= 5;
+                        }
+                    }
                 }
 
                 return { product: prod, score: score };
             });
 
+            // スコア降順ソート
             scoredProducts.sort((a, b) => b.score - a.score);
             const topProducts = scoredProducts.filter(p => p.score > 0).slice(0, 3);
 
             resultsContainer.innerHTML = '';
             
             if (topProducts.length === 0) {
-                resultsContainer.innerHTML = '<div class="p-4 text-center text-slate-500">条件を絞りすぎたかもしれません。<br>Bluetooth条件などを外して再トライしてみてください。</div>';
+                resultsContainer.innerHTML = '<div class="p-4 text-center text-slate-500">条件を少し広げて、もう一度試してみてください。</div>';
             } else {
                 topProducts.forEach((item, index) => {
                     const p = item.product;
                     const rankText = index === 0 ? 'Best Match' : `Recommend #${index + 1}`;
                     const rankColor = index === 0 ? 'bg-cyan-100 text-cyan-700' : 'bg-slate-200 text-slate-600';
                     const searchUrl = `https://www.amazon.co.jp/s?k=${encodeURIComponent(p.keyword)}&tag=${AFFILIATE_ID}`;
+
+                    // マッチした理由を表示するロジック
+                    const reasons = [];
+                    if (p.tags.some(t => userTags.includes(t) && ['video','photo','illus','3d'].includes(t))) reasons.push("用途");
+                    if (p.tags.some(t => userTags.includes(t) && ['dial','key'].includes(t))) reasons.push("操作感");
+                    if (p.tags.includes('cospa') && userTags.includes('cospa')) reasons.push("予算内");
+                    if (p.tags.includes('bluetooth') && userTags.includes('bluetooth')) reasons.push("無線対応");
 
                     const card = document.createElement('div');
                     card.className = "bg-white rounded-2xl p-6 shadow-md border border-gray-100 flex flex-col md:flex-row gap-6 items-start";
@@ -347,9 +378,10 @@
                                 <span class="text-xs font-medium text-cyan-600 border border-cyan-200 px-2 py-1 rounded">${p.badge}</span>
                             </div>
                             <h3 class="text-lg font-bold text-slate-800 mb-2">${p.name}</h3>
-                            <p class="text-sm text-slate-600 leading-relaxed mb-4">${p.desc}</p>
-                            <div class="flex flex-wrap gap-2 text-xs text-slate-400">
-                                ${p.tags.filter(t => ['dial','key','bluetooth','cospa'].includes(t)).map(t => `<span class="bg-slate-100 px-2 py-1 rounded">#${t}</span>`).join('')}
+                            <p class="text-sm text-slate-600 leading-relaxed mb-3">${p.desc}</p>
+                            <div class="flex items-center gap-2 text-xs text-slate-400">
+                                <i data-lucide="check-circle" class="w-3 h-3 text-green-500"></i>
+                                <span>マッチ理由: ${reasons.join('・')}</span>
                             </div>
                         </div>
                         <div class="w-full md:w-48 flex-shrink-0 flex flex-col justify-end gap-2">
