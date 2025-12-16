@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>左手デバイス 導入診断</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Noto Sans JP', sans-serif; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .amazon-btn {
+            background: #FF9900;
+            transition: all 0.2s;
+        }
+        .amazon-btn:hover {
+            background: #FFB84D;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(255, 153, 0, 0.3);
+        }
+        .option-btn:hover {
+            border-color: #06b6d4; /* cyan-500 */
+            background-color: #ecfeff; /* cyan-50 */
+        }
+        .option-btn.selected {
+            border-color: #06b6d4;
+            background-color: #cffafe;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+            <h1 class="text-base font-bold flex items-center gap-2 text-slate-700">
+                <i data-lucide="keyboard" class="w-5 h-5 text-cyan-600"></i>
+                <span>Left-Hand Device <span class="text-xs text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded ml-1">Navi</span></span>
+            </h1>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-3xl mx-auto px-4 py-8 w-full">
+        
+        <!-- スタート画面 -->
+        <div id="intro-screen" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center mt-4">
+            <div class="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-6 text-cyan-600">
+                <i data-lucide="sliders-horizontal" class="w-8 h-8"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-3 text-slate-800">あなたの作業を加速させる<br>「左手デバイス」診断</h2>
+            <p class="text-slate-500 mb-8 text-sm leading-relaxed">
+                動画編集、イラスト、事務作業...<br>
+                用途によって「正解」は全く異なります。<br>
+                数ある機種の中から、あなたにベストな一台を選定します。
+            </p>
+            <button onclick="startDiagnosis()" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 px-12 rounded-xl shadow-lg transition-transform transform hover:-translate-y-1 flex items-center justify-center gap-2 mx-auto">
+                <span>診断を始める</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <!-- 質問画面 -->
+        <div id="quiz-screen" class="hidden mt-4">
+            <div class="flex items-center gap-4 mb-6 px-1">
+                <div class="flex-grow h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="h-full bg-cyan-500 transition-all duration-500 ease-out" style="width: 0%"></div>
+                </div>
+                <span class="text-xs font-bold text-slate-400 whitespace-nowrap">Q.<span id="current-q-num">1</span> / 4</span>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 fade-in min-h-[400px] flex flex-col">
+                <h3 id="question-text" class="text-xl font-bold mb-8 text-center text-slate-800 leading-snug">質問テキスト</h3>
+                
+                <div id="options-container" class="space-y-3 flex-grow">
+                    <!-- 選択肢 -->
+                </div>
+                
+                <div class="mt-6 pt-6 border-t border-gray-100 flex justify-between items-center text-sm">
+                    <button id="back-btn" onclick="prevStep()" class="text-slate-400 hover:text-slate-600 flex items-center gap-1 invisible">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>戻る
+                    </button>
+                    <span class="text-xs text-gray-300">Next Question -></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ローディング -->
+        <div id="loading-screen" class="hidden text-center py-24 fade-in">
+            <div class="relative w-16 h-16 mx-auto mb-6">
+                <div class="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-cyan-500 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <h3 class="text-lg font-bold text-slate-700 mb-2">適合デバイス検索中...</h3>
+            <p class="text-sm text-slate-500">ボタン配置、ダイヤル操作、ソフト相性を分析しています</p>
+        </div>
+
+        <!-- 結果画面 -->
+        <div id="result-screen" class="hidden fade-in pb-12">
+            <div class="bg-slate-800 text-white p-8 rounded-2xl shadow-lg mb-8 text-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+                <p class="text-cyan-400 text-xs font-bold tracking-widest mb-2 uppercase relative z-10">Best Choice</p>
+                <h2 class="text-2xl font-bold relative z-10">あなたへの推奨デバイス</h2>
+            </div>
+
+            <div id="results-container" class="grid gap-6">
+                <!-- 結果カード -->
+            </div>
+
+            <div class="mt-12 text-center">
+                <button onclick="resetDiagnosis()" class="text-slate-500 hover:text-slate-800 text-sm underline decoration-slate-300 underline-offset-4">
+                    もう一度最初から診断する
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // ★★★ アフィリエイトID ★★★
+        const AFFILIATE_ID = 'artphotograph-22';
+
+        // 左手デバイスデータ
+        // tags: video(動画), photo(写真), illus(イラスト), general(事務・汎用), stream(配信), 3d(3D・CG)
+        // type: dial(ダイヤル重視), key(キー重視), stick(スティック)
+        const products = [
+            {
+                name: 'TourBox Elite',
+                price: '39,960',
+                desc: '動画・画像編集の「終着点」。ノブ、スクロール、ダイヤルが絶妙に配置され、タイムライン編集やブラシ調整が爆速化します。Bluetooth対応で配線もスッキリ。',
+                tags: ['video', 'photo', 'illus', 'dial', 'bluetooth'],
+                keyword: 'TourBox Elite',
+                badge: '編集作業の神機'
+            },
+            {
+                name: 'TourBox Lite',
+                price: '13,480',
+                desc: 'Eliteの基本機能はそのままに、価格を抑えたコスパモデル。初めての左手デバイスとして最適。USB-C有線接続で安定性抜群。',
+                tags: ['video', 'photo', 'illus', 'dial', 'cospa'],
+                keyword: 'TourBox Lite',
+                badge: '入門ベストバイ'
+            },
+            {
+                name: 'Elgato Stream Deck MK.2',
+                price: '20,000',
+                desc: '「アイコンが見える」ボタンが革命的。アプリ起動、ショートカット、配信のシーン切り替えなど、事務作業や配信者に最強の相棒。',
+                tags: ['general', 'stream', 'key', 'office'],
+                keyword: 'Elgato Stream Deck MK.2',
+                badge: '効率化の定番'
+            },
+            {
+                name: 'Razer Tartarus Pro',
+                price: '19,800',
+                desc: 'ゲーミングデバイスならではの反応速度と耐久性。32個のキーに大量のマクロを登録可能。3DモデリングやMMOプレイヤーに人気。',
+                tags: ['3d', 'game', 'key'],
+                keyword: 'Razer Tartarus Pro',
+                badge: '多ボタン・マクロ'
+            },
+            {
+                name: 'BRAIN MAGIC Orbital2 Sterra',
+                price: '26,400',
+                desc: '日本発の革新的なスティック型デバイス。「倒す・回す・押す」で数百のショートカットを直感操作。手首の疲労軽減に特化。',
+                tags: ['video', 'illus', 'stick', 'health'],
+                keyword: 'Orbital2 Sterra',
+                badge: '腱鞘炎対策'
+            },
+            {
+                name: 'Loupedeck Live',
+                price: '29,700',
+                desc: 'ダイヤルと液晶タッチボタンのハイブリッド。Lightroomでの色調補正や、Premiereでの細かい調整に威力を発揮します。',
+                tags: ['photo', 'video', 'stream', 'dial', 'key'],
+                keyword: 'Loupedeck Live',
+                badge: 'プロ仕様'
+            },
+            {
+                name: 'Xencelabs Quick Keys',
+                price: '13,980',
+                desc: '有機ELディスプレイ付きで「今どのキーに何を設定したか」が一目瞭然。ペンタブとの相性が良く、イラストレーターに特におすすめ。',
+                tags: ['illus', 'dial', 'key'],
+                keyword: 'Xencelabs Quick Keys',
+                badge: '絵師御用達'
+            }
+        ];
+
+        // 質問データ
+        const questions = [
+            {
+                text: "Q1. 主にどんな作業で使いたいですか？",
+                options: [
+                    { text: "動画編集 (Premiere, DaVinciなど)", tags: ['video'] },
+                    { text: "イラスト・お絵描き (Clip Studioなど)", tags: ['illus'] },
+                    { text: "写真現像・デザイン (Lightroom, Photoshop)", tags: ['photo'] },
+                    { text: "事務作業・配信・全般 (Excel, OBS, Zoom)", tags: ['general', 'stream', 'office'] },
+                    { text: "3D制作・ゲーム (Blender, FPS/MMO)", tags: ['3d', 'game'] }
+                ]
+            },
+            {
+                text: "Q2. 操作感の好みは？",
+                options: [
+                    { text: "「回す」操作で数値調整したい (ブラシサイズ、タイムライン)", tags: ['dial', 'stick'] },
+                    { text: "「ボタン」で一発呼び出ししたい (コピペ、ツール切替)", tags: ['key'] },
+                    { text: "両方バランスよく欲しい", tags: ['dial', 'key'] }
+                ]
+            },
+            {
+                text: "Q3. 接続方法や持ち運びのこだわりは？",
+                options: [
+                    { text: "無線(Bluetooth)でデスクをスッキリさせたい", tags: ['bluetooth'] },
+                    { text: "安定の有線接続でOK / 持ち運ばない", tags: ['cospa'] } // 有線OKならコスパモデルも候補に
+                ]
+            },
+            {
+                text: "Q4. 予算感は？",
+                options: [
+                    { text: "まずは安く試してみたい (〜1.5万円)", tags: ['cospa'] },
+                    { text: "高くても生産性が上がるなら投資する (2万円〜)", tags: ['pro'] } // proタグは今回ロジックに使わないが、安物を除外するフィルタに使える
+                ]
+            }
+        ];
+
+        // ------------------------------------------
+        // ロジック
+        // ------------------------------------------
+
+        let currentStep = 0;
+        let userTags = [];
+
+        const quizScreen = document.getElementById('quiz-screen');
+        const introScreen = document.getElementById('intro-screen');
+        const loadingScreen = document.getElementById('loading-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const progressBar = document.getElementById('progress-bar');
+        const currentQNum = document.getElementById('current-q-num');
+        const backBtn = document.getElementById('back-btn');
+        const resultsContainer = document.getElementById('results-container');
+
+        function startDiagnosis() {
+            introScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const q = questions[currentStep];
+            questionText.textContent = q.text;
+            currentQNum.textContent = currentStep + 1;
+            progressBar.style.width = `${((currentStep) / questions.length) * 100}%`;
+            backBtn.style.visibility = currentStep > 0 ? 'visible' : 'hidden';
+
+            optionsContainer.innerHTML = '';
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn w-full text-left p-4 rounded-xl border border-gray-200 transition-all font-medium text-slate-700 flex items-center justify-between group";
+                btn.style.animation = `fadeIn 0.4s ease-out ${idx * 0.1}s backwards`;
+                
+                btn.innerHTML = `
+                    <span>${opt.text}</span>
+                    <i data-lucide="chevron-right" class="text-gray-300 group-hover:text-cyan-500 transition-colors"></i>
+                `;
+                btn.onclick = () => handleAnswer(opt);
+                optionsContainer.appendChild(btn);
+            });
+            lucide.createIcons();
+        }
+
+        function handleAnswer(option) {
+            if (option.tags) userTags.push(...option.tags);
+
+            if (currentStep < questions.length - 1) {
+                currentStep++;
+                renderQuestion();
+            } else {
+                finishDiagnosis();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                userTags.pop(); 
+                renderQuestion();
+            }
+        }
+
+        function finishDiagnosis() {
+            quizScreen.classList.add('hidden');
+            loadingScreen.classList.remove('hidden');
+            progressBar.style.width = '100%';
+
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                showResult();
+            }, 2000);
+        }
+
+        function showResult() {
+            resultScreen.classList.remove('hidden');
+
+            const scoredProducts = products.map(prod => {
+                let score = 0;
+                
+                prod.tags.forEach(tag => {
+                    if (userTags.includes(tag)) score += 3;
+                    // クリティカルな用途の一致を重くする
+                    if (['video', 'illus', '3d', 'stream'].includes(tag) && userTags.includes(tag)) score += 5;
+                });
+
+                // 予算フィルタリング（簡易）
+                // ユーザーが「安く試したい(cospa)」を選んでいて、商品にcospaタグがなく価格が2万超えならスコア大幅ダウン
+                if (userTags.includes('cospa') && !prod.tags.includes('cospa') && parseInt(prod.price.replace(/,/g, '')) > 20000) {
+                    score -= 10;
+                }
+                
+                // Bluetooth必須フィルタ
+                if (userTags.includes('bluetooth') && !prod.tags.includes('bluetooth')) {
+                    score -= 15;
+                }
+
+                return { product: prod, score: score };
+            });
+
+            scoredProducts.sort((a, b) => b.score - a.score);
+            const topProducts = scoredProducts.filter(p => p.score > 0).slice(0, 3);
+
+            resultsContainer.innerHTML = '';
+            
+            if (topProducts.length === 0) {
+                resultsContainer.innerHTML = '<div class="p-4 text-center text-slate-500">条件を絞りすぎたかもしれません。<br>Bluetooth条件などを外して再トライしてみてください。</div>';
+            } else {
+                topProducts.forEach((item, index) => {
+                    const p = item.product;
+                    const rankText = index === 0 ? 'Best Match' : `Recommend #${index + 1}`;
+                    const rankColor = index === 0 ? 'bg-cyan-100 text-cyan-700' : 'bg-slate-200 text-slate-600';
+                    const searchUrl = `https://www.amazon.co.jp/s?k=${encodeURIComponent(p.keyword)}&tag=${AFFILIATE_ID}`;
+
+                    const card = document.createElement('div');
+                    card.className = "bg-white rounded-2xl p-6 shadow-md border border-gray-100 flex flex-col md:flex-row gap-6 items-start";
+                    card.innerHTML = `
+                        <div class="flex-grow">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="text-xs font-bold px-2 py-1 rounded ${rankColor}">${rankText}</span>
+                                <span class="text-xs font-medium text-cyan-600 border border-cyan-200 px-2 py-1 rounded">${p.badge}</span>
+                            </div>
+                            <h3 class="text-lg font-bold text-slate-800 mb-2">${p.name}</h3>
+                            <p class="text-sm text-slate-600 leading-relaxed mb-4">${p.desc}</p>
+                            <div class="flex flex-wrap gap-2 text-xs text-slate-400">
+                                ${p.tags.filter(t => ['dial','key','bluetooth','cospa'].includes(t)).map(t => `<span class="bg-slate-100 px-2 py-1 rounded">#${t}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="w-full md:w-48 flex-shrink-0 flex flex-col justify-end gap-2">
+                            <div class="text-right">
+                                <span class="text-xs text-slate-400">参考価格</span>
+                                <div class="text-xl font-bold text-slate-800">¥${p.price}</div>
+                            </div>
+                            <a href="${searchUrl}" target="_blank" class="amazon-btn w-full text-center py-3 rounded-lg text-white font-bold text-sm shadow-sm flex items-center justify-center gap-2">
+                                Amazonで見る
+                                <i data-lucide="external-link" class="w-4 h-4"></i>
+                            </a>
+                        </div>
+                    `;
+                    resultsContainer.appendChild(card);
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function resetDiagnosis() {
+            currentStep = 0;
+            userTags = [];
+            resultScreen.classList.add('hidden');
+            introScreen.classList.remove('hidden');
+            progressBar.style.width = '0%';
+        }
+    </script>
+</body>
+</html>
