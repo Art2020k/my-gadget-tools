@@ -217,6 +217,10 @@
         
         const products = [
             // --- KZ / CCA / TRN (Super Low ~ Low) ---
+            { name: 'KZ Zenith', price: '8,500', tags: ['wired', 'china', 'flat', 'low', 'driver_dd', 'tune_switch', 'music'], desc: 'KZの新世代フラッグシップDD。4つのスイッチとフルメタル筐体。バランスの良い音質でKZの「本気」を感じる一台。', keyword: 'KZ Zenith' },
+            { name: 'KZ Duonic', price: '3,500', tags: ['wired', 'china', 'fun', 'super_low', 'driver_hybrid', 'music', 'driver_planar'], desc: '1DD+平面駆動という変態ハイブリッド。3000円台とは思えない解像度と低音のキレ。装着深度がカギ。', keyword: 'KZ Duonic' },
+            { name: 'KZ ZAX', price: '7,500', tags: ['wired', 'china', 'fun', 'low', 'driver_hybrid', 'music'], desc: '1DD+7BAの「音の洪水」。濃厚で派手なKZサウンドの完成形。ロックやメタルとの相性が抜群。', keyword: 'KZ ZAX' },
+            { name: 'KZ ZSTx', price: '2,500', tags: ['wired', 'china', 'fun', 'super_low', 'driver_hybrid', 'music'], desc: '伝説の名機ZSTの進化版。安価なハイブリッドの入門機として最適。ドンシャリの楽しさを教えてくれる。', keyword: 'KZ ZSTx' },
             { name: 'KZ Castor (Bass)', price: '2,500', tags: ['wired', 'china', 'bass', 'super_low', 'driver_dd', 'tune_switch', 'music'], desc: 'ハーマンターゲット+低音強化。2DD構成でこの価格は異常。スイッチで音質変更も可能。', keyword: 'KZ Castor Black' },
             { name: 'KZ Castor (Harman)', price: '2,500', tags: ['wired', 'china', 'vocal', 'super_low', 'driver_dd', 'tune_switch', 'music'], desc: '銀色の筐体。ボーカルが前に出る綺麗な音作り。低価格帯のバランス型の覇権モデル。', keyword: 'KZ Castor Silver' },
             { name: 'KZ ZS10 Pro X', price: '6,800', tags: ['wired', 'china', 'fun', 'low', 'driver_hybrid', 'music', 'game'], desc: 'KZの代名詞的モデル。1DD+4BAのハイブリッド構成で、キレのあるドンシャリサウンド。FPSにも使える。', keyword: 'KZ ZS10 Pro X' },
@@ -229,7 +233,16 @@
             { name: 'CCA Hydro', price: '18,000', tags: ['wired', 'china', 'fun', 'mid', 'driver_hybrid', 'music'], desc: 'CCAのフラッグシップ。2DD+8BAという物量投入機。圧倒的な情報量と広い音場。', keyword: 'CCA Hydro' },
             { name: 'TRN Conch', price: '4,500', tags: ['wired', 'china', 'flat', 'super_low', 'driver_dd', 'acc_rich', 'monitor'], desc: '「付属品が本体」。交換用ノズル、高品位ケーブル、ケースまでついてこの価格。', keyword: 'TRN Conch' },
             { name: 'TRN ST1 Pro', price: '2,500', tags: ['wired', 'china', 'fun', 'super_low', 'driver_hybrid', 'music'], desc: '激安ハイブリッドの定番。スマホ直挿しでも元気に鳴るドンシャリ入門機。', keyword: 'TRN ST1 Pro' },
+            
+            // --- SIVGA (Wood / Warm) ---
+            { name: 'SIVGA Que', price: '14,800', tags: ['wired', 'china', 'vocal', 'mid', 'driver_dd', 'warm', 'wood'], desc: '美しい木製ハウジング。ベリリウムメッキDD搭載で、温かみがありつつクリアな中高音が魅力。女性ボーカルに最適。', keyword: 'SIVGA Que' },
+            { name: 'SIVGA Que UTG', price: '15,980', tags: ['wired', 'china', 'flat', 'mid', 'driver_planar', 'monitor'], desc: 'VGP金賞受賞モデル。平面振動板を採用し、ノーマルQueより解像度とレスポンスを向上させた上位版。', keyword: 'SIVGA Que UTG' },
 
+            // --- DUNU (High End / Vocal) ---
+            { name: 'DUNU DaVinci', price: '47,000', tags: ['wired', 'china', 'vocal', 'premium', 'driver_hybrid', 'music', 'bass'], desc: '2DD+4BA。Gizaudioコラボモデル。木製フェイスプレートが美しく、深く沈む低音と艶のあるボーカルが絶品。', keyword: 'DUNU DaVinci' },
+            { name: 'DUNU DN-242', price: '54,000', tags: ['wired', 'china', 'flat', 'premium', 'driver_hybrid', 'monitor'], desc: '2DD+4BA+2Planarのトリプルハイブリッド。圧倒的な分離感とフラットな特性で、モニター用途にも使えるプロ機。', keyword: 'DUNU DN 242' },
+            { name: 'DUNU Titan S2', price: '13,000', tags: ['wired', 'china', 'flat', 'mid', 'driver_dd', 'game'], desc: 'サイバーパンクなデザイン。キレのあるフラットサウンドでFPSなどのゲーム用途でも評価が高い。', keyword: 'DUNU Titan S2' },
+            
             // --- その他 中華 (Simgot, Moondrop, etc) ---
             { name: 'SIMGOT EW200', price: '6,500', tags: ['wired', 'china', 'fun', 'low', 'driver_dd', 'game', 'music'], desc: 'U1万円の「破壊者」。定位感が良く、FPSゲーマーからも絶大な支持を得ている。', keyword: 'SIMGOT EW200' },
             { name: 'SIMGOT EA500 LM', price: '13,000', tags: ['wired', 'china', 'fun', 'mid', 'driver_dd', 'game', 'music'], desc: 'リチウムマグネシウム振動板。解像度、定位感、音の厚み、全てがワンランク上。', keyword: 'SIMGOT EA500 LM' },
@@ -253,7 +266,9 @@
             { name: 'Sony IER-M7', price: '80,000', tags: ['wired', 'japan', 'major', 'flat', 'premium', 'driver_ba', 'monitor', 'pro'], desc: 'ステージ用モニターの傑作。正確無比な音で、楽器の練習や耳コピに最適。', keyword: 'Sony IER-M7' },
 
             // --- ワイヤレス・定番機 (High / Premium) ---
-            { name: 'Sony WF-1000XM5', price: '38,000', tags: ['wireless', 'major', 'bass', 'premium', 'anc', 'work', 'music'], desc: '静寂の王。世界最高クラスのノイズキャンセリング。機能性もトップ。', keyword: 'Sony WF-1000XM5' },
+            { name: 'Apple AirPods Pro 2', price: '39,800', tags: ['wireless', 'major', 'flat', 'premium', 'anc', 'work', 'iphone'], desc: 'iPhoneユーザーの最適解。強力なノイキャン、自然な外音取り込み、空間オーディオ。全てが高次元。', keyword: 'Apple AirPods Pro 第2世代' },
+            { name: 'Anker Soundcore Liberty 4', price: '14,990', tags: ['wireless', 'major', 'fun', 'mid', 'anc', 'work'], desc: '機能全部入り。Ankerの傑作。ヘルスケア機能やマルチポイントなど、機能性重視ならこれ。', keyword: 'Anker Soundcore Liberty 4' },
+            { name: 'Sony WF-1000XM5', price: '38,000', tags: ['wireless', 'major', 'bass', 'premium', 'anc', 'work'], desc: '静寂の王。世界最高クラスのノイキャンとLDAC対応の高音質。Androidユーザーなら第一候補。', keyword: 'Sony WF-1000XM5' },
             { name: 'Technics EAH-AZ80', price: '36,000', tags: ['wireless', 'major', 'flat', 'premium', 'anc', 'work', 'music'], desc: '有線並みの解像度。3台マルチポイント対応で仕事用としても最強。', keyword: 'Technics EAH-AZ80' },
             { name: 'Sennheiser MTW4', price: '46,000', tags: ['wireless', 'major', 'flat', 'premium', 'anc', 'music'], desc: 'ゼンハイザーの最新フラッグシップ。音の広がりと自然さはTWS随一。', keyword: 'Sennheiser MOMENTUM True Wireless 4' },
             { name: 'Bose QC Ultra Earbuds', price: '36,000', tags: ['wireless', 'major', 'bass', 'premium', 'anc', 'work'], desc: '圧倒的消音と重低音。イマーシブオーディオの臨場感が凄い。', keyword: 'Bose QuietComfort Ultra Earbuds' },
@@ -516,3 +531,4 @@
 </body>
 
 </html>
+
