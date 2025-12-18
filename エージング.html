@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KOKU | Minimalist Aging Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600&display=swap');
+
+        :root {
+            /* Light Theme (Limestone) */
+            --bg-light: #F2F2F0;
+            --text-light: #4A4A4A;
+            --accent-light: #2D2D2D;
+            --sub-light: #A0A09C;
+            
+            /* Dark Theme (Concrete) */
+            --bg-dark: #121212;
+            --text-dark: #E0E0E0;
+            --accent-dark: #FFBF00; /* Pale Amber */
+            --sub-dark: #888888; /* 視認性向上のため明るく調整 */
+            --track-dark: #333333;
+            
+            --ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.8s var(--ease-fluid), color 0.8s var(--ease-fluid);
+        }
+
+        /* Custom Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none; 
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: transparent; /* つまみは透明にしてバーの操作感を優先 */
+            border: none;
+        }
+        
+        input[type=range]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: transparent;
+            border: none;
+        }
+
+        input[type=range]:focus {
+            outline: none; 
+        }
+
+        /* Utility classes for transitions */
+        .fluid-transition {
+            transition-property: all;
+            transition-duration: 800ms;
+            transition-timing-function: var(--ease-fluid);
+        }
+        
+        .icon-transition {
+            transition: all 0.5s var(--ease-fluid);
+        }
+
+        /* Mode Specific Colors */
+        .theme-light {
+            background-color: var(--bg-light);
+            color: var(--text-light);
+            --accent: var(--accent-light);
+            --sub: var(--sub-light);
+            --track: #D1D1D1;
+        }
+
+        .theme-dark {
+            background-color: var(--bg-dark);
+            color: var(--text-dark);
+            --accent: var(--accent-dark);
+            --sub: var(--sub-dark);
+            --track: var(--track-dark);
+        }
+
+        /* Animation States for Play/Pause */
+        .icon-active {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+        }
+        .icon-inactive {
+            opacity: 0;
+            transform: scale(0.5) rotate(-90deg);
+        }
+        .icon-inactive-pause {
+             opacity: 0;
+             transform: scale(0.5) rotate(90deg);
+        }
+
+        /* Long Press Button Animation */
+        @keyframes fillUp {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
+        .filling {
+            animation: fillUp 3s linear forwards;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        amber: { 400: '#FFBF00' },
+                        stone: { 900: '#121212', 50: '#F2F2F0' }
+                    },
+                    letterSpacing: {
+                        'widest-xl': '0.25em',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="theme-dark h-screen w-screen overflow-hidden flex flex-col relative selection:bg-gray-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="w-full p-8 flex justify-between items-center z-20">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl font-light tracking-widest-xl fluid-transition text-[var(--accent)]">KOKU</h1>
+            <span class="text-[10px] uppercase tracking-widest text-[var(--sub)] mt-1 hidden sm:block">Aging Studio</span>
+        </div>
+        <button id="themeToggle" class="p-2 fluid-transition hover:opacity-70 text-[var(--text)]">
+            <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+            <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+        </button>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 flex flex-col justify-center items-center w-full max-w-4xl mx-auto px-6 relative z-10">
+        
+        <!-- Status Display -->
+        <div class="w-full mb-12 text-center">
+            <div id="phaseDisplay" class="text-xs uppercase tracking-[0.3em] text-[var(--sub)] mb-2 fluid-transition">Standby</div>
+            <div id="timeDisplay" class="text-6xl md:text-8xl font-thin tracking-widest tabular-nums fluid-transition text-[var(--text)]">00:00</div>
+        </div>
+
+        <!-- Architectural Progress Bar -->
+        <div class="w-full h-[1px] bg-[var(--track)] relative mb-16 max-w-2xl mx-auto overflow-hidden">
+            <div id="progressBar" class="absolute top-0 left-0 h-full bg-[var(--accent)] width-0 fluid-transition duration-1000"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex items-center gap-12 mb-16">
+            <!-- Play/Pause Button with Seamless Animation -->
+            <button id="toggleBtn" class="group relative flex items-center justify-center w-20 h-20 fluid-transition border border-[var(--sub)] rounded-full hover:border-[var(--accent)] active:scale-95">
+                <!-- Play Icon -->
+                <div id="playIconWrapper" class="absolute inset-0 flex items-center justify-center icon-transition icon-active">
+                    <i data-lucide="play" class="w-6 h-6 text-[var(--text)] fill-current group-hover:text-[var(--accent)] fluid-transition ml-1"></i>
+                </div>
+                <!-- Pause Icon (Square for Stop/Pause concept) -->
+                <div id="pauseIconWrapper" class="absolute inset-0 flex items-center justify-center icon-transition icon-inactive-pause">
+                    <i data-lucide="square" class="w-5 h-5 text-[var(--text)] fill-current group-hover:text-[var(--accent)] fluid-transition"></i>
+                </div>
+            </button>
+            
+            <div class="flex flex-col items-center gap-2">
+                <button id="lrToggle" class="text-xs tracking-widest text-[var(--sub)] hover:text-[var(--accent)] fluid-transition border-b border-transparent hover:border-[var(--accent)] pb-1">STEREO</button>
+            </div>
+        </div>
+
+        <!-- Mixer Section -->
+        <div class="grid grid-cols-3 gap-8 w-full max-w-lg mb-12">
+            <!-- Pink Noise -->
+            <div class="flex flex-col items-center gap-4 group">
+                <!-- 
+                     Slider Container: 
+                     relative w-12 h-32 (縦長領域を確保)
+                -->
+                <div class="relative w-12 h-32 flex justify-center items-end">
+                    <!-- Visual Track -->
+                    <div class="h-full w-[1px] bg-[var(--track)] relative group-hover:bg-[var(--sub)] fluid-transition pointer-events-none">
+                        <div id="pinkLevel" class="absolute bottom-0 left-0 w-full bg-[var(--accent)] fluid-transition" style="height: 60%;"></div>
+                    </div>
+                    
+                    <!-- 
+                        Input Slider:
+                        1. w-32 h-12: コンテナの高さと同じ「幅」を持つ横長スライダーにする
+                        2. absolute center: 中心に配置
+                        3. -rotate-90: 回転させて縦にする
+                        4. z-20: 最前面へ
+                        5. opacity-0: 完全透明化（だが見えないだけで存在させる）
+                    -->
+                    <input type="range" min="0" max="1" step="0.01" value="0.6" data-type="pink" 
+                           class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-12 -rotate-90 z-20 opacity-0 cursor-pointer" 
+                           aria-label="Pink Noise Volume">
+                </div>
+                <span class="text-[10px] uppercase tracking-widest text-[var(--sub)] fluid-transition group-hover:text-[var(--text)]">Pink</span>
+            </div>
+
+            <!-- White Noise -->
+            <div class="flex flex-col items-center gap-4 group">
+                <div class="relative w-12 h-32 flex justify-center items-end">
+                    <div class="h-full w-[1px] bg-[var(--track)] relative group-hover:bg-[var(--sub)] fluid-transition pointer-events-none">
+                        <div id="whiteLevel" class="absolute bottom-0 left-0 w-full bg-[var(--accent)] fluid-transition" style="height: 10%;"></div>
+                    </div>
+                    <input type="range" min="0" max="1" step="0.01" value="0.1" data-type="white" 
+                           class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-12 -rotate-90 z-20 opacity-0 cursor-pointer"
+                           aria-label="White Noise Volume">
+                </div>
+                <span class="text-[10px] uppercase tracking-widest text-[var(--sub)] fluid-transition group-hover:text-[var(--text)]">White</span>
+            </div>
+
+            <!-- Brown Noise -->
+            <div class="flex flex-col items-center gap-4 group">
+                <div class="relative w-12 h-32 flex justify-center items-end">
+                    <div class="h-full w-[1px] bg-[var(--track)] relative group-hover:bg-[var(--sub)] fluid-transition pointer-events-none">
+                        <div id="brownLevel" class="absolute bottom-0 left-0 w-full bg-[var(--accent)] fluid-transition" style="height: 30%;"></div>
+                    </div>
+                    <input type="range" min="0" max="1" step="0.01" value="0.3" data-type="brown" 
+                           class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-12 -rotate-90 z-20 opacity-0 cursor-pointer"
+                           aria-label="Brown Noise Volume">
+                </div>
+                <span class="text-[10px] uppercase tracking-widest text-[var(--sub)] fluid-transition group-hover:text-[var(--text)]">Brown</span>
+            </div>
+        </div>
+
+        <!-- Footer Info -->
+        <div class="w-full flex justify-between items-end border-t border-[var(--track)] pt-4 max-w-4xl">
+            <div class="text-[10px] text-[var(--sub)] font-mono">
+                <div class="mb-1">TOTAL AGING</div>
+                <div id="totalTime" class="text-sm text-[var(--text)] tracking-wider">00h 00m</div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Visualizer Background -->
+    <canvas id="visualizer" class="absolute bottom-0 left-0 w-full h-48 pointer-events-none opacity-40 z-0"></canvas>
+
+    <script>
+        /**
+         * KOKU - Core Logic
+         * Uses Functional Programming patterns and ES6+ features.
+         */
+
+        // --- Configuration & State ---
+        const CONFIG = {
+            PLAY_DURATION: 50 * 60, // 50 mins
+            REST_DURATION: 10 * 60, // 10 mins
+            FADE_TIME: 2.0, // Seconds
+            PAN_INTERVAL: 10, // Seconds for full pan cycle (if active)
+        };
+
+        const state = {
+            isPlaying: false,
+            phase: 'STOPPED', // STOPPED, PLAYING, RESTING
+            timeLeft: CONFIG.PLAY_DURATION,
+            totalTime: parseInt(localStorage.getItem('koku_total_time') || '0'),
+            lrMode: 'STEREO', // STEREO, SWEEP
+            noiseLevels: { pink: 0.6, white: 0.1, brown: 0.3 },
+            audioCtx: null,
+            nodes: {},
+            theme: localStorage.getItem('koku_theme') || 'dark',
+            wakeLock: null
+        };
+
+        // --- DOM Elements ---
+        const dom = {
+            body: document.body,
+            themeToggle: document.getElementById('themeToggle'),
+            phase: document.getElementById('phaseDisplay'),
+            time: document.getElementById('timeDisplay'),
+            progress: document.getElementById('progressBar'),
+            toggleBtn: document.getElementById('toggleBtn'),
+            playIconWrapper: document.getElementById('playIconWrapper'),
+            pauseIconWrapper: document.getElementById('pauseIconWrapper'),
+            lrToggle: document.getElementById('lrToggle'),
+            visualizer: document.getElementById('visualizer'),
+            totalTime: document.getElementById('totalTime'),
+            sliders: document.querySelectorAll('input[type=range]')
+        };
+
+        // --- Audio Engine (Web Audio API) ---
+        const AudioEngine = (() => {
+            let ctx = null;
+            let masterGain = null;
+            let panner = null;
+            let analyser = null;
+            let sources = { pink: null, white: null, brown: null };
+            let gains = { pink: null, white: null, brown: null };
+
+            // Noise Generator Functions
+            const createNoiseBuffer = (context, type) => {
+                const bufferSize = 5 * context.sampleRate; // 5 seconds loop
+                const buffer = context.createBuffer(2, bufferSize, context.sampleRate);
+                
+                for (let channel = 0; channel < 2; channel++) {
+                    const output = buffer.getChannelData(channel);
+                    for (let i = 0; i < bufferSize; i++) {
+                        if (type === 'white') {
+                            output[i] = Math.random() * 2 - 1;
+                        } else if (type === 'pink') {
+                            let b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0;
+                            const white = Math.random() * 2 - 1;
+                            b0 = 0.99886 * b0 + white * 0.0555179;
+                            b1 = 0.99332 * b1 + white * 0.0750759;
+                            b2 = 0.96900 * b2 + white * 0.1538520;
+                            b3 = 0.86650 * b3 + white * 0.3104856;
+                            b4 = 0.55000 * b4 + white * 0.5329522;
+                            b5 = -0.7616 * b5 - white * 0.0168980;
+                            output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                            output[i] *= 0.11; 
+                            b6 = white * 0.115926;
+                        } else if (type === 'brown') {
+                            let lastOut = 0.0;
+                            const white = Math.random() * 2 - 1;
+                            output[i] = (lastOut + (0.02 * white)) / 1.02;
+                            lastOut = output[i];
+                            output[i] *= 3.5; 
+                        }
+                    }
+                }
+                return buffer;
+            };
+
+            const init = () => {
+                if (ctx) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                ctx = new AudioContext();
+
+                masterGain = ctx.createGain();
+                panner = ctx.createStereoPanner();
+                analyser = ctx.createAnalyser();
+                
+                analyser.fftSize = 2048;
+                analyser.smoothingTimeConstant = 0.9;
+
+                masterGain.connect(panner);
+                panner.connect(analyser);
+                analyser.connect(ctx.destination);
+                masterGain.gain.setValueAtTime(0, ctx.currentTime);
+
+                state.audioCtx = ctx;
+                state.nodes.analyser = analyser;
+            };
+
+            const createSource = (type) => {
+                const buffer = createNoiseBuffer(ctx, type);
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+                source.loop = true;
+                
+                const gainNode = ctx.createGain();
+                gainNode.gain.value = state.noiseLevels[type];
+
+                source.connect(gainNode);
+                gainNode.connect(masterGain);
+
+                return { source, gainNode };
+            };
+
+            const start = () => {
+                if (!ctx) init();
+                if (ctx.state === 'suspended') ctx.resume();
+
+                stopNoise();
+
+                ['pink', 'white', 'brown'].forEach(type => {
+                    const { source, gainNode } = createSource(type);
+                    sources[type] = source;
+                    gains[type] = gainNode;
+                    source.start(0);
+                });
+
+                masterGain.gain.cancelScheduledValues(ctx.currentTime);
+                masterGain.gain.setValueAtTime(0, ctx.currentTime);
+                masterGain.gain.linearRampToValueAtTime(1, ctx.currentTime + CONFIG.FADE_TIME);
+            };
+
+            const stop = () => {
+                if (!ctx) return;
+                masterGain.gain.cancelScheduledValues(ctx.currentTime);
+                masterGain.gain.setValueAtTime(masterGain.gain.value, ctx.currentTime);
+                masterGain.gain.linearRampToValueAtTime(0, ctx.currentTime + CONFIG.FADE_TIME);
+
+                setTimeout(stopNoise, CONFIG.FADE_TIME * 1000);
+            };
+
+            const stopNoise = () => {
+                Object.values(sources).forEach(s => {
+                    if(s) { try { s.stop(); s.disconnect(); } catch(e){} }
+                });
+                Object.values(gains).forEach(g => {
+                    if(g) { try { g.disconnect(); } catch(e){} }
+                });
+                sources = { pink: null, white: null, brown: null };
+                gains = { pink: null, white: null, brown: null };
+            };
+
+            const updateVolume = (type, val) => {
+                if (gains[type]) {
+                    gains[type].gain.setTargetAtTime(val, ctx.currentTime, 0.1);
+                }
+            };
+
+            const setPan = (val) => {
+                if(panner) panner.pan.value = val;
+            };
+
+            return { init, start, stop, updateVolume, setPan, getAnalyser: () => analyser };
+        })();
+
+        // --- Logic Engine (Worker & Timer) ---
+        const workerBlob = new Blob([`
+            let timerId = null;
+            self.onmessage = function(e) {
+                if (e.data === 'start') {
+                    timerId = setInterval(() => postMessage('tick'), 1000);
+                } else if (e.data === 'stop') {
+                    clearInterval(timerId);
+                }
+            };
+        `], { type: 'application/javascript' });
+        
+        const timerWorker = new Worker(window.URL.createObjectURL(workerBlob));
+
+        timerWorker.onmessage = (e) => {
+            if (e.data === 'tick') {
+                tick();
+            }
+        };
+
+        const tick = () => {
+            if (state.timeLeft > 0) {
+                state.timeLeft--;
+            } else {
+                switchPhase();
+            }
+            
+            if (state.phase === 'PLAYING') {
+                state.totalTime++;
+                if (state.totalTime % 10 === 0) {
+                    localStorage.setItem('koku_total_time', state.totalTime);
+                }
+            }
+            
+            if (state.isPlaying && state.lrMode === 'SWEEP') {
+                const cycle = Date.now() / (CONFIG.PAN_INTERVAL * 1000);
+                const panVal = Math.sin(cycle * Math.PI * 2); 
+                AudioEngine.setPan(panVal);
+            } else {
+                AudioEngine.setPan(0);
+            }
+
+            updateUI();
+        };
+
+        const switchPhase = () => {
+            if (state.phase === 'PLAYING') {
+                state.phase = 'RESTING';
+                state.timeLeft = CONFIG.REST_DURATION;
+                AudioEngine.stop();
+            } else {
+                state.phase = 'PLAYING';
+                state.timeLeft = CONFIG.PLAY_DURATION;
+                AudioEngine.start();
+            }
+        };
+
+        const togglePlay = async () => {
+            state.isPlaying = !state.isPlaying;
+            
+            if (state.isPlaying) {
+                if (state.phase === 'STOPPED') state.phase = 'PLAYING';
+                timerWorker.postMessage('start');
+                if (state.phase === 'PLAYING') AudioEngine.start();
+                enableWakeLock();
+            } else {
+                timerWorker.postMessage('stop');
+                AudioEngine.stop();
+                releaseWakeLock();
+            }
+            updateUI();
+        };
+
+        const enableWakeLock = async () => {
+            if ('wakeLock' in navigator) {
+                try {
+                    state.wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.log('Wake Lock error:', err);
+                }
+            }
+        };
+
+        const releaseWakeLock = () => {
+            if (state.wakeLock) {
+                state.wakeLock.release();
+                state.wakeLock = null;
+            }
+        };
+
+        // --- UI & Rendering ---
+        const formatTime = (seconds) => {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        };
+
+        const formatTotalTime = (seconds) => {
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            return `${h}h ${m}m`;
+        };
+
+        const updateUI = () => {
+            dom.time.textContent = formatTime(state.timeLeft);
+            dom.phase.textContent = state.isPlaying ? state.phase : 'PAUSED';
+            dom.totalTime.textContent = formatTotalTime(state.totalTime);
+
+            // Button Animation Logic (Crossfade)
+            if (state.isPlaying) {
+                // Show Pause (Square), Hide Play
+                dom.playIconWrapper.classList.remove('icon-active');
+                dom.playIconWrapper.classList.add('icon-inactive');
+                
+                dom.pauseIconWrapper.classList.remove('icon-inactive-pause');
+                dom.pauseIconWrapper.classList.add('icon-active');
+            } else {
+                // Show Play, Hide Pause
+                dom.playIconWrapper.classList.remove('icon-inactive');
+                dom.playIconWrapper.classList.add('icon-active');
+
+                dom.pauseIconWrapper.classList.remove('icon-active');
+                dom.pauseIconWrapper.classList.add('icon-inactive-pause');
+            }
+
+            const total = state.phase === 'RESTING' ? CONFIG.REST_DURATION : CONFIG.PLAY_DURATION;
+            const progress = ((total - state.timeLeft) / total) * 100;
+            dom.progress.style.width = `${progress}%`;
+            
+            if (state.phase === 'RESTING') {
+                dom.time.style.opacity = '0.5';
+            } else {
+                dom.time.style.opacity = '1';
+            }
+        };
+
+        const applyTheme = () => {
+            if (state.theme === 'dark') {
+                dom.body.classList.remove('theme-light');
+                dom.body.classList.add('theme-dark');
+                dom.body.classList.add('dark');
+            } else {
+                dom.body.classList.remove('theme-dark');
+                dom.body.classList.add('theme-light');
+                dom.body.classList.remove('dark');
+            }
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        };
+
+        const drawVisualizer = () => {
+            const canvas = dom.visualizer;
+            const ctx = canvas.getContext('2d');
+            const analyser = AudioEngine.getAnalyser();
+
+            if (!analyser) return requestAnimationFrame(drawVisualizer);
+
+            if (canvas.width !== canvas.offsetWidth || canvas.height !== canvas.offsetHeight) {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+            }
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteTimeDomainData(dataArray);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.lineWidth = 1;
+            
+            const color = state.theme === 'dark' ? '#FFBF00' : '#2D2D2D';
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = 0.3;
+
+            ctx.beginPath();
+            const sliceWidth = canvas.width * 1.0 / bufferLength;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0; 
+                const y = (v * canvas.height) / 2;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+                x += sliceWidth;
+            }
+
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+
+            requestAnimationFrame(drawVisualizer);
+        };
+
+        // --- Event Listeners ---
+        const initAudioGuard = () => {
+            AudioEngine.init();
+            drawVisualizer();
+            document.removeEventListener('click', initAudioGuard);
+        };
+        document.addEventListener('click', initAudioGuard);
+
+        dom.themeToggle.addEventListener('click', () => {
+            state.theme = state.theme === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('koku_theme', state.theme);
+            applyTheme();
+        });
+
+        dom.toggleBtn.addEventListener('click', togglePlay);
+        
+        dom.lrToggle.addEventListener('click', () => {
+            state.lrMode = state.lrMode === 'STEREO' ? 'SWEEP' : 'STEREO';
+            dom.lrToggle.textContent = state.lrMode;
+            if (state.lrMode === 'STEREO') AudioEngine.setPan(0);
+        });
+
+        dom.sliders.forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                const type = e.target.dataset.type;
+                const val = parseFloat(e.target.value);
+                state.noiseLevels[type] = val;
+                AudioEngine.updateVolume(type, val);
+                const bar = document.getElementById(`${type}Level`);
+                bar.style.height = `${val * 100}%`;
+            });
+        });
+
+        // --- Initialization ---
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        } else {
+             window.addEventListener('load', () => {
+                 if (typeof lucide !== 'undefined') lucide.createIcons();
+             });
+        }
+        
+        applyTheme();
+        updateUI();
+
+    </script>
+</body>
+</html>
