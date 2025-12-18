@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earphone Performance Lab | エージング＆性能診断</title>
+    <meta name="description" content="イヤホンのポテンシャルを解放せよ。エージング用ピンクノイズ再生、重低音〜超高音の再生能力テスト、ステレオ定位チェックができるプロ仕様ツール。">
+    
+    <!-- OGP -->
+    <meta property="og:title" content="Earphone Performance Lab | イヤホン性能極限テスト">
+    <meta property="og:description" content="あなたのイヤホンは20Hzの重低音を再生できますか？エージングから限界テストまで、ブラウザで完結。">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Inter"', 'sans-serif'], mono: ['"JetBrains Mono"', 'monospace'] },
+                    colors: { brand: { bg: '#050505', surface: '#121212', accent: '#00dc82', text: '#f3f4f6' } },
+                    animation: { 
+                        'pulse-fast': 'pulse 0.1s infinite',
+                        'scan': 'scan 2s linear infinite'
+                    },
+                    keyframes: { 
+                        scan: { '0%': { transform: 'translateY(-100%)' }, '100%': { transform: 'translateY(100%)' } }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #050505; color: #f3f4f6; }
+        .glass-panel { background: rgba(20, 20, 20, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); box-shadow: 0 0 40px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+        
+        /* Sliders */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%;
+            background: #00dc82; cursor: pointer; margin-top: -10px;
+            box-shadow: 0 0 15px rgba(0, 220, 130, 0.8); border: 2px solid #fff;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px;
+        }
+
+        .visualizer-container { display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 40px; }
+        .v-bar { width: 4px; background: #333; border-radius: 2px; transition: height 0.1s; }
+        .active .v-bar { background: #00dc82; box-shadow: 0 0 10px #00dc82; }
+
+        .btn-primary {
+            background: #00dc82; color: #000; font-weight: bold;
+            transition: all 0.2s; border: 1px solid rgba(255,255,255,0.2);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 20px rgba(0, 220, 130, 0.6); }
+        .btn-secondary {
+            background: transparent; color: #fff; font-weight: bold;
+            border: 1px solid rgba(255,255,255,0.2); transition: all 0.2s;
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
+
+        .scan-line { position: absolute; left: 0; top: 0; width: 100%; height: 2px; background: rgba(0, 220, 130, 0.5); box-shadow: 0 0 10px #00dc82; animation: scan 3s linear infinite; pointer-events: none; opacity: 0; }
+        .scanning .scan-line { opacity: 1; }
+
+        .amazon-btn {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            transition: all 0.2s; border: 1px solid rgba(255,255,255,0.2);
+        }
+        .amazon-btn:hover { transform: translateY(-2px); box-shadow: 0 0 25px rgba(245, 158, 11, 0.5); filter: brightness(1.1); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center font-sans selection:bg-emerald-500 selection:text-white pb-20">
+
+    <!-- Warning Header -->
+    <div class="w-full bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-2 text-center">
+        <p class="text-xs text-yellow-500 font-mono font-bold flex items-center justify-center gap-2">
+            <i data-lucide="volume-2" class="w-4 h-4"></i>
+            WARNING: Set volume to LOW before testing.
+        </p>
+    </div>
+
+    <!-- Main Content -->
+    <div class="w-full max-w-3xl px-4 mt-8">
+        
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center gap-2 mb-2 text-[#00dc82]">
+                <i data-lucide="waves" class="w-6 h-6"></i>
+                <span class="font-mono font-bold tracking-widest">EARPHONE LAB v2.1</span>
+            </div>
+            <h1 class="text-3xl md:text-5xl font-black mb-4 leading-tight text-white">
+                イヤホンの<span class="text-[#00dc82]">真価</span>を問う。
+            </h1>
+            <p class="text-brand-muted text-sm md:text-base">
+                エージング(慣らし運転)から、再生能力の限界テストまで。<br>
+                あなたのデバイスのポテンシャルを解放します。
+            </p>
+        </div>
+
+        <!-- Tool 1: Burn-in (Aging) -->
+        <div class="glass-panel rounded-2xl p-6 md:p-8 mb-8" id="burnin-panel">
+            <div class="scan-line"></div>
+            <div class="flex justify-between items-start mb-6">
+                <h2 class="text-xl font-bold flex items-center gap-2 text-white">
+                    <i data-lucide="zap" class="text-[#00dc82]"></i>
+                    BURN-IN MODE (エージング)
+                </h2>
+                <span class="text-[10px] font-mono border border-[#00dc82] text-[#00dc82] px-2 py-1 rounded">PINK NOISE</span>
+            </div>
+            
+            <p class="text-sm text-brand-muted mb-6">
+                全帯域を均等に含む「ピンクノイズ」を再生し、振動板を馴染ませます。<br>
+                ※ 音量は「普段聴くより少し小さめ」に設定し、放置してください。
+            </p>
+
+            <!-- Visualizer (Fake) -->
+            <div class="visualizer-container mb-6" id="burnin-vis">
+                <!-- Bars generated by JS -->
+            </div>
+
+            <button onclick="toggleBurnIn()" id="burnin-btn" class="w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 btn-secondary">
+                <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                <span id="burnin-text">エージング開始 (無限ループ)</span>
+            </button>
+        </div>
+
+        <!-- Tool 2: Frequency Range Test -->
+        <div class="glass-panel rounded-2xl p-6 md:p-8 mb-8">
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-white">
+                <i data-lucide="activity" class="text-blue-400"></i>
+                RANGE TEST (再生能力)
+            </h2>
+            
+            <div class="text-center mb-8 relative">
+                <div class="text-6xl font-black font-mono tracking-tighter mb-2 text-white" id="freq-display">1,000<span class="text-2xl text-brand-muted ml-2">Hz</span></div>
+                <div class="inline-block bg-white/10 px-4 py-1 rounded-full text-sm font-bold text-blue-400 border border-white/10" id="range-label">
+                    中音域 (Human Voice)
+                </div>
+            </div>
+
+            <div class="px-2 mb-8">
+                <input type="range" id="freq-slider" min="20" max="20000" step="10" value="1000" oninput="updateFreq(this.value)">
+                <div class="flex justify-between text-[10px] text-brand-muted font-mono mt-3 uppercase" id="freq-labels">
+                    <span>20Hz</span>
+                    <span>100Hz</span>
+                    <span>1kHz</span>
+                    <span>10kHz</span>
+                    <span>20kHz</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button id="tone-btn" onclick="toggleTone()" class="w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 btn-secondary">
+                    <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                    <span id="tone-text">トーン再生</span>
+                </button>
+                
+                <button onclick="unlockHiRes()" id="unlock-btn" class="text-xs text-[#00dc82] hover:text-white border border-[#00dc82]/30 hover:border-[#00dc82] rounded-lg py-2 transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="zap" class="w-3 h-3"></i>
+                    高級イヤホン自慢モード (Unlock 50kHz)
+                </button>
+            </div>
+
+            <p class="text-xs text-brand-muted text-center mt-4">
+                ※ 20Hz〜50Hzは「耳」ではなく「振動」で感じてください。<br>
+                ※ 20,000Hz以上は「ハイレゾ対応機器」と「コウモリの耳」が必要です。
+            </p>
+        </div>
+
+        <!-- Tool 3: Stereo & Imaging -->
+        <div class="glass-panel rounded-2xl p-6 md:p-8 mb-8">
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-white">
+                <i data-lucide="move-horizontal" class="text-purple-400"></i>
+                STEREO / IMAGING (定位)
+            </h2>
+            
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <button onmousedown="playStereo('left')" onmouseup="stopStereo()" ontouchstart="playStereo('left')" ontouchend="stopStereo()" class="h-24 rounded-xl border border-white/10 hover:bg-white/5 active:bg-blue-500/20 transition-all flex flex-col items-center justify-center gap-1 group">
+                    <span class="text-4xl font-black text-brand-muted group-active:text-blue-400 transition-all">L</span>
+                    <span class="text-[10px] font-mono text-brand-muted">Left Only</span>
+                </button>
+                <button onmousedown="playStereo('right')" onmouseup="stopStereo()" ontouchstart="playStereo('right')" ontouchend="stopStereo()" class="h-24 rounded-xl border border-white/10 hover:bg-white/5 active:bg-red-500/20 transition-all flex flex-col items-center justify-center gap-1 group">
+                    <span class="text-4xl font-black text-brand-muted group-active:text-red-400 transition-all">R</span>
+                    <span class="text-[10px] font-mono text-brand-muted">Right Only</span>
+                </button>
+            </div>
+
+            <button onclick="startPanning()" id="pan-btn" class="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 btn-secondary mb-2">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                <span id="pan-text">定位移動テスト (L ↔ R)</span>
+            </button>
+            
+            <!-- Pan Visualizer -->
+            <div class="w-full h-2 bg-gray-800 rounded-full mt-4 relative overflow-hidden">
+                <div id="pan-indicator" class="absolute top-0 left-1/2 w-4 h-full bg-purple-500 rounded-full transform -translate-x-1/2 transition-all duration-75 opacity-0"></div>
+            </div>
+        </div>
+
+        <!-- Affiliate / Share -->
+        <div class="text-center mt-12">
+            <div class="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-white/10 rounded-2xl p-8 mb-8">
+                <h3 class="text-lg font-bold mb-2 text-white">「低音が聞こえない」「音がボヤける」？</h3>
+                <p class="text-sm text-brand-muted mb-6">
+                    それはイヤホンの性能限界かもしれません。<br>
+                    ドライバー径の大きいイヤホンや、ハイレゾ対応機で世界が変わります。
+                </p>
+                <div id="rec-container" class="grid gap-4 text-left mb-8">
+                    <!-- Recommendations -->
+                </div>
+
+                <!-- Link to Diagnosis Tool -->
+                <div class="pt-6 border-t border-white/10">
+                    <p class="text-xs text-brand-muted mb-3 font-mono">STILL LOOKING FOR THE BEST GEAR?</p>
+                    <a href="https://art2020k.github.io/my-gadget-tools/イヤホン診断.html" class="group relative inline-flex items-center justify-center px-6 py-3 font-bold text-[#00dc82] transition-all duration-200 border border-[#00dc82]/30 rounded-lg hover:bg-[#00dc82]/10 hover:border-[#00dc82] hover:shadow-[0_0_15px_rgba(0,220,130,0.2)] w-full md:w-auto">
+                        <i data-lucide="search" class="w-4 h-4 mr-2 group-hover:scale-110 transition-transform"></i>
+                        <span>自分に合うイヤホンを診断する</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"></i>
+                    </a>
+                </div>
+            </div>
+
+            <button onclick="shareResult()" class="bg-black border border-white/20 hover:bg-white/10 text-white px-8 py-3 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 mx-auto mb-4">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                このツールをシェア
+            </button>
+            <p class="text-[10px] text-brand-muted">#イヤホンエージング #可聴域チェック</p>
+        </div>
+
+    </div>
+
+    <script>
+        lucide.createIcons();
+        const AFFILIATE_ID = 'artphotograph-22';
+
+        // --- Audio System ---
+        let audioCtx;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // --- 1. Pink Noise (Burn-in) ---
+        let pinkNoiseNode = null;
+        let isBurnIn = false;
+
+        function createPinkNoise() {
+            const bufferSize = 4096;
+            const pinkNoise = (function() {
+                let b0, b1, b2, b3, b4, b5, b6;
+                b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
+                const node = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+                node.onaudioprocess = function(e) {
+                    const output = e.outputBuffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        const white = Math.random() * 2 - 1;
+                        b0 = 0.99886 * b0 + white * 0.0555179;
+                        b1 = 0.99332 * b1 + white * 0.0750759;
+                        b2 = 0.96900 * b2 + white * 0.1538520;
+                        b3 = 0.86650 * b3 + white * 0.3104856;
+                        b4 = 0.55000 * b4 + white * 0.5329522;
+                        b5 = -0.7616 * b5 - white * 0.0168980;
+                        output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                        output[i] *= 0.11; // Gain adjustment
+                        b6 = white * 0.115926;
+                    }
+                };
+                return node;
+            })();
+            return pinkNoise;
+        }
+
+        function toggleBurnIn() {
+            initAudio();
+            const btn = document.getElementById('burnin-btn');
+            const panel = document.getElementById('burnin-panel');
+            const visContainer = document.getElementById('burnin-vis');
+
+            if (isBurnIn) {
+                // Stop
+                if (pinkNoiseNode) {
+                    pinkNoiseNode.disconnect();
+                    pinkNoiseNode = null;
+                }
+                isBurnIn = false;
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+                document.getElementById('burnin-text').textContent = 'エージング開始 (無限ループ)';
+                panel.classList.remove('scanning');
+                visContainer.classList.remove('active');
+            } else {
+                // Start
+                pinkNoiseNode = createPinkNoise();
+                pinkNoiseNode.connect(audioCtx.destination);
+                isBurnIn = true;
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+                document.getElementById('burnin-text').textContent = 'エージング中... (停止)';
+                panel.classList.add('scanning');
+                visContainer.classList.add('active');
+            }
+        }
+
+        // Init Visualizer Bars
+        const visContainer = document.getElementById('burnin-vis');
+        for(let i=0; i<30; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'v-bar';
+            bar.style.height = '4px';
+            visContainer.appendChild(bar);
+        }
+        
+        // Visualizer Loop
+        function animateVis() {
+            if(isBurnIn) {
+                const bars = document.querySelectorAll('.v-bar');
+                bars.forEach(bar => {
+                    bar.style.height = Math.random() * 30 + 4 + 'px';
+                });
+            }
+            requestAnimationFrame(animateVis);
+        }
+        animateVis();
+
+
+        // --- 2. Tone Generator ---
+        let toneOsc = null;
+        let isTonePlaying = false;
+
+        function updateFreq(val) {
+            const freq = parseInt(val);
+            document.getElementById('freq-display').innerHTML = `${freq.toLocaleString()}<span class="text-2xl text-brand-muted ml-2">Hz</span>`;
+            
+            if (isTonePlaying && toneOsc) {
+                toneOsc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            }
+
+            // Label Logic
+            let label = "";
+            let color = "text-brand-muted";
+            if(freq < 60) { label = "Sub-Bass (重低音・振動)"; color = "text-purple-400"; }
+            else if(freq < 250) { label = "Bass (低音)"; color = "text-blue-400"; }
+            else if(freq < 2000) { label = "Midrange (中音・ボーカル)"; color = "text-green-400"; }
+            else if(freq < 6000) { label = "High-Mid (中高音)"; color = "text-yellow-400"; }
+            else if(freq < 15000) { label = "Treble (高音)"; color = "text-orange-400"; }
+            else if(freq <= 20000) { label = "Air / Mosquito (超高音)"; color = "text-red-400"; }
+            else if(freq <= 30000) { label = "Hi-Res Area (可聴域外)"; color = "text-[#00dc82]"; }
+            else { label = "God Tier (コウモリ級)"; color = "text-[#00dc82] animate-pulse"; }
+            
+            const badge = document.getElementById('range-label');
+            badge.textContent = label;
+            badge.className = `inline-block bg-white/10 px-4 py-1 rounded-full text-sm font-bold border border-white/10 ${color}`;
+        }
+
+        function unlockHiRes() {
+            const slider = document.getElementById('freq-slider');
+            const btn = document.getElementById('unlock-btn');
+            const labels = document.getElementById('freq-labels');
+            
+            if(slider.max == 20000) {
+                slider.max = 50000;
+                btn.innerHTML = '<i data-lucide="lock" class="w-3 h-3"></i> 通常モードに戻す';
+                btn.classList.add('bg-[#00dc82]/10');
+                labels.innerHTML = `
+                    <span>20Hz</span>
+                    <span>1k</span>
+                    <span>10k</span>
+                    <span>20k</span>
+                    <span class="text-[#00dc82] font-bold">50k</span>
+                `;
+            } else {
+                slider.max = 20000;
+                if(slider.value > 20000) {
+                    slider.value = 20000;
+                    updateFreq(20000);
+                }
+                btn.innerHTML = '<i data-lucide="zap" class="w-3 h-3"></i> 高級イヤホン自慢モード (Unlock 50kHz)';
+                btn.classList.remove('bg-[#00dc82]/10');
+                labels.innerHTML = `
+                    <span>20Hz</span>
+                    <span>100Hz</span>
+                    <span>1kHz</span>
+                    <span>10kHz</span>
+                    <span>20kHz</span>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        function toggleTone() {
+            initAudio();
+            const btn = document.getElementById('tone-btn');
+            const val = document.getElementById('freq-slider').value;
+
+            if (isTonePlaying) {
+                toneOsc.stop();
+                toneOsc = null;
+                isTonePlaying = false;
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+                document.getElementById('tone-text').textContent = 'トーン再生';
+            } else {
+                toneOsc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                toneOsc.type = 'sine';
+                toneOsc.frequency.value = val;
+                gain.gain.value = 0.1; // Safety
+                
+                toneOsc.connect(gain);
+                gain.connect(audioCtx.destination);
+                toneOsc.start();
+                isTonePlaying = true;
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+                document.getElementById('tone-text').textContent = '停止';
+            }
+        }
+
+        // --- 3. Stereo & Panning ---
+        let stOsc = null;
+        let panOsc = null;
+        let panNode = null;
+        let isPanning = false;
+
+        function playStereo(side) {
+            initAudio();
+            stOsc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const panner = audioCtx.createStereoPanner();
+
+            stOsc.type = 'sine';
+            stOsc.frequency.value = 440;
+            panner.pan.value = side === 'left' ? -1 : 1;
+            gain.gain.value = 0.1;
+
+            stOsc.connect(gain);
+            gain.connect(panner);
+            panner.connect(audioCtx.destination);
+            stOsc.start();
+        }
+
+        function stopStereo() {
+            if(stOsc) {
+                stOsc.stop();
+                stOsc = null;
+            }
+        }
+
+        function startPanning() {
+            initAudio();
+            const btn = document.getElementById('pan-btn');
+            const indicator = document.getElementById('pan-indicator');
+
+            if (isPanning) {
+                panOsc.stop();
+                panOsc = null;
+                isPanning = false;
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+                document.getElementById('pan-text').textContent = '定位移動テスト (L ↔ R)';
+                indicator.style.opacity = 0;
+            } else {
+                panOsc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                panNode = audioCtx.createStereoPanner();
+
+                panOsc.type = 'sine';
+                panOsc.frequency.value = 800; // Beep
+                gain.gain.value = 0.1;
+
+                panOsc.connect(gain);
+                gain.connect(panNode);
+                panNode.connect(audioCtx.destination);
+                panOsc.start();
+
+                // Animation loop for Panning
+                let startTime = audioCtx.currentTime;
+                isPanning = true;
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+                document.getElementById('pan-text').textContent = '停止';
+                indicator.style.opacity = 1;
+
+                function loop() {
+                    if(!isPanning) return;
+                    const elapsed = audioCtx.currentTime - startTime;
+                    const pos = Math.sin(elapsed * 2); // Speed
+                    panNode.pan.value = pos;
+                    
+                    // Visual update
+                    const percent = (pos + 1) / 2 * 100;
+                    indicator.style.left = percent + '%';
+                    
+                    requestAnimationFrame(loop);
+                }
+                loop();
+            }
+        }
+
+        // --- Affiliate Injection ---
+        const recItems = [
+            { name: "Sennheiser IE 200", desc: "【有線】原音再生の基準機。この価格でこの解像度は反則級。", kw: "Sennheiser IE 200", price: "¥23,000" },
+            { name: "Sony WH-1000XM5", desc: "【無線】業界最高峰のノイキャンと音質。耳の限界を試すならこれ。", kw: "Sony WH-1000XM5", price: "¥48,000" },
+            { name: "Moondrop Aria 2", desc: "【中華】1万円台の覇権。ボーカルの息遣いまで聴こえる美音。", kw: "Moondrop Aria 2", price: "¥13,500" }
+        ];
+
+        const recContainer = document.getElementById('rec-container');
+        recItems.forEach(item => {
+            const url = `https://www.amazon.co.jp/s?k=${encodeURIComponent(item.kw)}&tag=${AFFILIATE_ID}`;
+            recContainer.innerHTML += `
+                <a href="${url}" target="_blank" class="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl hover:border-[#00dc82]/50 transition-all group">
+                    <div class="text-left">
+                        <div class="font-bold text-white group-hover:text-[#00dc82] transition-colors">${item.name}</div>
+                        <div class="text-xs text-brand-muted">${item.desc}</div>
+                    </div>
+                    <div class="text-right flex flex-col items-end">
+                        <div class="text-xs font-mono text-brand-muted mb-1">${item.price}</div>
+                        <i data-lucide="external-link" class="w-4 h-4 text-white"></i>
+                    </div>
+                </a>
+            `;
+        });
+
+        function shareResult() {
+            const text = `【Earphone Performance Lab】\n私のイヤホンで性能テスト中...🎧\n・エージング機能\n・可聴域チェック\n・定位テスト\n\nあなたのデバイスの実力は？\n#オーディオチェック #イヤホン`;
+            const url = "https://Art2020k.github.io/Gadget/EarphoneLab.html";
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+        }
+    </script>
+</body>
+</html>
