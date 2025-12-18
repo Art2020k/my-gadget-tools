@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earphone Burn-in PRO | Fade & Cool Edition</title>
+    <meta name="description" content="フェードイン/アウト機能搭載。50分再生/10分休憩の自動サイクルで、イヤホンを安全にエージング。">
+    
+    <!-- OGP -->
+    <meta property="og:title" content="Earphone Burn-in PRO v3.1">
+    <meta property="og:description" content="ドライバー保護フェード機能搭載。あなたのイヤホンを「完成」させるプロ仕様ツール。">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            bg: '#09090b',
+                            surface: '#18181b',
+                            accent: '#10b981', // Emerald 500
+                            warn: '#f59e0b',   // Amber 500
+                            text: '#fafafa',
+                            muted: '#a1a1aa'
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                        'breathe': 'breathe 3s ease-in-out infinite'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: 0, transform: 'translateY(10px)' },
+                            '100%': { opacity: 1, transform: 'translateY(0)' }
+                        },
+                        breathe: {
+                            '0%, 100%': { opacity: 0.6 },
+                            '50%': { opacity: 1 }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #09090b;
+            color: #fafafa;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+        
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+            border-radius: 24px;
+        }
+
+        .btn-modern { transition: all 0.2s ease; position: relative; overflow: hidden; }
+        .btn-modern:active { transform: scale(0.98); }
+        
+        .btn-mode { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .btn-mode:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.2); }
+        .btn-mode.active { background: rgba(16, 185, 129, 0.1); border-color: #10b981; color: #10b981; }
+
+        .btn-play { background: #fafafa; color: #000; box-shadow: 0 0 20px rgba(255, 255, 255, 0.1); }
+        .btn-play:hover { background: #fff; box-shadow: 0 0 30px rgba(255, 255, 255, 0.3); }
+        .btn-play.running { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid #ef4444; box-shadow: none; }
+        .btn-play.running:hover { background: rgba(239, 68, 68, 0.2); }
+
+        .progress-ring__circle { transition: stroke-dashoffset 0.35s, stroke 0.5s; transform: rotate(-90deg); transform-origin: 50% 50%; }
+        
+        .v-bar { width: 4px; border-radius: 2px; background: #3f3f46; transition: height 0.1s, background-color 0.2s; }
+        .playing .v-bar { background: #10b981; }
+        .cooling .v-bar { background: #f59e0b; height: 2px !important; transition: all 1s; }
+
+        /* Cooling Mode Styles */
+        .mode-cooling .progress-ring__circle { stroke: #f59e0b; }
+        .mode-cooling #time-label { color: #f59e0b; }
+        .mode-cooling #main-time { color: #f59e0b; text-shadow: 0 0 10px rgba(245, 158, 11, 0.3); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-6 font-sans">
+
+    <!-- Main Container -->
+    <div class="w-full max-w-sm md:max-w-4xl relative z-10 animate-fade-in">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8 px-2">
+            <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <h1 class="text-sm font-mono tracking-widest text-brand-muted">BURN-IN PRO</h1>
+            </div>
+            <div class="text-[10px] text-brand-muted font-mono border border-white/10 px-2 py-1 rounded">v3.1 FIXED</div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Left Panel: Status & Visualizer -->
+            <div class="glass-panel p-8 flex flex-col items-center justify-center aspect-square md:aspect-auto relative overflow-hidden transition-colors duration-500" id="status-panel">
+                
+                <!-- Circular Progress -->
+                <div class="relative w-64 h-64 flex items-center justify-center">
+                    <svg class="w-full h-full" viewBox="0 0 120 120">
+                        <circle class="text-white/5" stroke-width="2" stroke="currentColor" fill="transparent" r="54" cx="60" cy="60" />
+                        <circle id="progress-ring" class="text-emerald-500 progress-ring__circle" stroke-width="2" stroke-dasharray="339.292" stroke-dashoffset="339.292" stroke-linecap="round" stroke="currentColor" fill="transparent" r="54" cx="60" cy="60" />
+                    </svg>
+                    
+                    <!-- Time Display -->
+                    <div class="absolute text-center w-full">
+                        <div id="time-label" class="text-xs text-brand-muted font-mono mb-1 tracking-widest transition-colors">TOTAL PLAY TIME</div>
+                        <div id="main-time" class="text-4xl font-light font-mono tracking-tighter text-white transition-colors">00:00</div>
+                        <div id="status-text" class="text-[10px] text-emerald-500 font-bold mt-2 tracking-widest opacity-0 transition-opacity">RUNNING</div>
+                    </div>
+                </div>
+
+                <!-- Visualizer -->
+                <div id="visualizer" class="flex gap-1 h-8 items-end mt-8">
+                    <!-- JS generated bars -->
+                </div>
+            </div>
+
+            <!-- Right Panel: Controls -->
+            <div class="flex flex-col gap-4">
+                
+                <!-- Recipe Selection -->
+                <div class="glass-panel p-6">
+                    <p class="text-xs text-brand-muted font-bold mb-4 uppercase tracking-wider">Select Program</p>
+                    <div class="space-y-2">
+                        <button onclick="setMode('speed')" id="btn-speed" class="btn-mode btn-modern w-full p-4 rounded-xl flex items-center justify-between group">
+                            <div class="text-left">
+                                <div class="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">Speed Run</div>
+                                <div class="text-[10px] text-brand-muted">24H / Pink Noise / 高負荷</div>
+                            </div>
+                            <i data-lucide="zap" class="w-4 h-4 text-brand-muted group-hover:text-emerald-400"></i>
+                        </button>
+                        <button onclick="setMode('natural')" id="btn-natural" class="btn-mode btn-modern w-full p-4 rounded-xl flex items-center justify-between group">
+                            <div class="text-left">
+                                <div class="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">Natural</div>
+                                <div class="text-[10px] text-brand-muted">100H / Mix / 自然な慣らし</div>
+                            </div>
+                            <i data-lucide="leaf" class="w-4 h-4 text-brand-muted group-hover:text-emerald-400"></i>
+                        </button>
+                        <button onclick="setMode('bass')" id="btn-bass" class="btn-mode btn-modern w-full p-4 rounded-xl flex items-center justify-between group">
+                            <div class="text-left">
+                                <div class="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">Deep Bass</div>
+                                <div class="text-[10px] text-brand-muted">50H / Brown Noise / 低域重点</div>
+                            </div>
+                            <i data-lucide="waves" class="w-4 h-4 text-brand-muted group-hover:text-emerald-400"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Control -->
+                <div class="glass-panel p-6 flex flex-col justify-between flex-grow">
+                    <div class="mb-4">
+                        <p class="text-xs text-brand-muted font-bold mb-2 uppercase tracking-wider">Current Target</p>
+                        <div class="flex justify-between items-end">
+                            <span id="target-display" class="text-2xl font-mono text-white">SELECT MODE</span>
+                            <span class="text-xs text-brand-muted" id="estimated-date">--/--</span>
+                        </div>
+                    </div>
+                    
+                    <button onclick="togglePlay()" id="play-btn" class="btn-modern btn-play w-full py-4 rounded-xl font-bold text-sm tracking-widest flex items-center justify-center gap-3">
+                        <i data-lucide="play" class="w-4 h-4 fill-current"></i> START BURN-IN
+                    </button>
+                    
+                    <p class="text-[10px] text-brand-muted text-center mt-3 leading-tight opacity-70">
+                        ※ドライバー保護のためフェード処理と休憩が自動適用されます。<br>
+                        ※画面を閉じるとタイマーが止まる場合があります。
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Link to Diagnosis (Footer) -->
+        <div class="mt-8 text-center">
+            <a href="https://art2020k.github.io/my-gadget-tools/イヤホン診断.html" class="inline-flex items-center gap-2 text-xs text-brand-muted hover:text-emerald-400 transition-colors py-2 px-4 rounded-full border border-transparent hover:border-emerald-500/20 hover:bg-emerald-500/5 group">
+                <i data-lucide="search" class="w-3 h-3"></i>
+                <span>まだ運命のイヤホンに出会えていない？ 最適解を診断する</span>
+                <i data-lucide="arrow-right" class="w-3 h-3 group-hover:translate-x-1 transition-transform"></i>
+            </a>
+        </div>
+
+    </div>
+
+    <!-- Completion Modal -->
+    <div id="cert-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden">
+        <div class="glass-panel p-8 max-w-sm w-full text-center border border-emerald-500/30 shadow-[0_0_50px_rgba(16,185,129,0.2)] transform scale-95 transition-all">
+            <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="award" class="w-6 h-6"></i>
+            </div>
+            <h2 class="text-xl font-bold text-white mb-2">CERTIFIED</h2>
+            <p class="text-xs text-brand-muted mb-6">エージングプログラム完了証明</p>
+            
+            <div class="bg-white/5 rounded-lg p-4 mb-6 text-left space-y-2">
+                <div class="flex justify-between text-xs"><span class="text-brand-muted">MODE</span><span class="text-white" id="cert-mode">NATURAL</span></div>
+                <div class="flex justify-between text-xs"><span class="text-brand-muted">TIME</span><span class="text-white" id="cert-time">100 HOURS</span></div>
+                <div class="flex justify-between text-xs"><span class="text-brand-muted">DATE</span><span class="text-white font-mono" id="cert-date">--</span></div>
+            </div>
+
+            <!-- Device Name Input -->
+            <div class="mb-6">
+                <label class="block text-left text-[10px] text-brand-muted mb-1 ml-1">DEVICE NAME (Optional)</label>
+                <input type="text" id="device-name" placeholder="例: Sennheiser IE900" class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none transition-colors placeholder-white/20">
+            </div>
+
+            <button onclick="shareCert()" class="btn-modern w-full py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs tracking-wider mb-3 flex items-center justify-center gap-2">
+                <i data-lucide="twitter" class="w-4 h-4"></i> 証明書をポストする
+            </button>
+            <button onclick="closeModal()" class="text-xs text-brand-muted hover:text-white">閉じる</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // --- State Management ---
+        const state = {
+            isRunning: false,
+            phase: 'idle', // idle, playing, cooling
+            totalPlaySeconds: 0,
+            targetSeconds: 0,
+            mode: null,
+            phaseStartTime: 0,
+            cycleCount: 1
+        };
+        
+        const PLAY_DURATION = 50 * 60; // 50m
+        const COOL_DURATION = 10 * 60; // 10m
+
+        // Load Time
+        if(localStorage.getItem('ebp_total_sec')) {
+            state.totalPlaySeconds = parseInt(localStorage.getItem('ebp_total_sec'));
+            // updateTimeDisplay called after DOM loaded or manually triggered later
+        }
+
+        // --- Audio Engine (Fade Support) ---
+        let audioCtx, noiseNode, gainNode;
+
+        function initAudio() {
+            if(!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                gainNode = audioCtx.createGain();
+                gainNode.gain.value = 0; // Start silent for fade-in
+                gainNode.connect(audioCtx.destination);
+                initVisualizer();
+            }
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function createNoiseBuffer(type) {
+            const bufferSize = 2 * audioCtx.sampleRate;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = buffer.getChannelData(0);
+            
+            if (type === 'pink') {
+                let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const w = Math.random() * 2 - 1;
+                    b0 = 0.99886 * b0 + w * 0.0555179;
+                    b1 = 0.99332 * b1 + w * 0.0750759;
+                    b2 = 0.96900 * b2 + w * 0.1538520;
+                    b3 = 0.86650 * b3 + w * 0.3104856;
+                    b4 = 0.55000 * b4 + w * 0.5329522;
+                    b5 = -0.7616 * b5 - w * 0.0168980;
+                    output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
+                    b6 = w * 0.115926;
+                }
+            } else if (type === 'white') {
+                for (let i = 0; i < bufferSize; i++) output[i] = (Math.random() * 2 - 1) * 0.5;
+            } else if (type === 'brown') {
+                let lastOut = 0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const w = Math.random() * 2 - 1;
+                    output[i] = (lastOut + (0.02 * w)) / 1.02;
+                    lastOut = output[i];
+                    output[i] *= 3.5; 
+                }
+            }
+            return buffer;
+        }
+
+        function startSound() {
+            initAudio();
+            if(noiseNode) return;
+            
+            let type = 'pink';
+            if(state.mode === 'speed') type = 'white';
+            if(state.mode === 'bass') type = 'brown';
+
+            const buffer = createNoiseBuffer(type);
+            noiseNode = audioCtx.createBufferSource();
+            noiseNode.buffer = buffer;
+            noiseNode.loop = true;
+            noiseNode.connect(gainNode);
+            
+            // Fade In (1s)
+            gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 1);
+            
+            noiseNode.start();
+            document.getElementById('visualizer').classList.remove('cooling');
+            document.getElementById('visualizer').classList.add('playing');
+        }
+
+        function stopSound(callback) {
+            if(noiseNode) {
+                // Fade Out (1s)
+                gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(gainNode.gain.value, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1);
+
+                setTimeout(() => {
+                    if(noiseNode) {
+                        try {
+                            noiseNode.stop();
+                            noiseNode.disconnect();
+                        } catch(e) { console.log(e) }
+                        noiseNode = null;
+                    }
+                    if(callback) callback();
+                }, 1000);
+            } else {
+                if(callback) callback();
+            }
+            document.getElementById('visualizer').classList.remove('playing');
+        }
+
+        // --- Logic ---
+        function setMode(mode) {
+            state.mode = mode;
+            
+            // UI
+            document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${mode}`).classList.add('active');
+
+            // Targets
+            if(mode === 'speed') state.targetSeconds = 24 * 3600;
+            if(mode === 'natural') state.targetSeconds = 100 * 3600;
+            if(mode === 'bass') state.targetSeconds = 50 * 3600;
+
+            document.getElementById('target-display').textContent = `${state.targetSeconds / 3600} HOURS`;
+            
+            // Calc ETA
+            const now = new Date();
+            // Using state.totalPlaySeconds (correct variable name now)
+            const remainingSec = Math.max(0, state.targetSeconds - state.totalPlaySeconds);
+            // Include rest time in estimate (add 20% overhead)
+            const realTimeSec = remainingSec * 1.2;
+            const finishDate = new Date(now.getTime() + realTimeSec * 1000);
+            document.getElementById('estimated-date').textContent = `ETA: ${finishDate.getMonth()+1}/${finishDate.getDate()}`;
+
+            // Reset if manual change
+            if(state.isRunning) {
+                togglePlay(); // Stop
+            }
+        }
+
+        let mainLoop;
+
+        function togglePlay() {
+            if (!state.mode) { alert('モードを選択してください'); return; }
+
+            const btn = document.getElementById('play-btn');
+
+            if (state.isRunning) {
+                // STOP
+                state.isRunning = false;
+                state.phase = 'idle';
+                stopSound(); // Fade out and stop
+                clearInterval(mainLoop);
+                localStorage.setItem('ebp_total_sec', state.totalPlaySeconds);
+                
+                btn.innerHTML = '<i data-lucide="play" class="w-4 h-4 fill-current"></i> RESUME';
+                btn.classList.remove('running');
+                updateStatusUI('idle');
+                document.getElementById('status-panel').classList.remove('mode-cooling');
+            } else {
+                // START
+                state.isRunning = true;
+                state.phase = 'playing';
+                state.phaseStartTime = Date.now();
+                startSound(); // Fade in
+                
+                btn.innerHTML = '<i data-lucide="pause" class="w-4 h-4 fill-current"></i> PAUSE';
+                btn.classList.add('running');
+                updateStatusUI('playing');
+                document.getElementById('status-panel').classList.remove('mode-cooling');
+
+                mainLoop = setInterval(gameLoop, 1000);
+            }
+            lucide.createIcons();
+        }
+
+        function gameLoop() {
+            const now = Date.now();
+            const phaseElapsed = Math.floor((now - state.phaseStartTime) / 1000);
+
+            if (state.phase === 'playing') {
+                state.totalPlaySeconds++;
+                updateTimeDisplay();
+                
+                // Switch to Cool
+                if (phaseElapsed >= PLAY_DURATION) {
+                    state.phase = 'cooling';
+                    state.phaseStartTime = now;
+                    stopSound(); // Fade out
+                    
+                    // UI Switch
+                    updateStatusUI('cooling');
+                    document.getElementById('status-panel').classList.add('mode-cooling');
+                    document.getElementById('visualizer').classList.add('cooling');
+                }
+            } 
+            else if (state.phase === 'cooling') {
+                // Switch to Play
+                if (phaseElapsed >= COOL_DURATION) {
+                    state.phase = 'playing';
+                    state.phaseStartTime = now;
+                    state.cycleCount++;
+                    startSound(); // Fade in
+                    
+                    // UI Switch
+                    updateStatusUI('playing');
+                    document.getElementById('status-panel').classList.remove('mode-cooling');
+                    document.getElementById('visualizer').classList.remove('cooling');
+                }
+            }
+
+            if (state.totalPlaySeconds % 30 === 0) localStorage.setItem('ebp_total_sec', state.totalPlaySeconds);
+
+            if (state.totalPlaySeconds >= state.targetSeconds) {
+                togglePlay();
+                showCert();
+            }
+        }
+
+        function updateTimeDisplay() {
+            const h = Math.floor(state.totalPlaySeconds / 3600);
+            const m = Math.floor((state.totalPlaySeconds % 3600) / 60).toString().padStart(2, '0');
+            document.getElementById('main-time').textContent = `${h}:${m}`;
+
+            const circle = document.getElementById('progress-ring');
+            const circumference = 54 * 2 * Math.PI; // r=54
+            const max = state.targetSeconds > 0 ? state.targetSeconds : 360000;
+            const percent = Math.min(state.totalPlaySeconds / max, 1);
+            const offset = circumference - percent * circumference;
+            circle.style.strokeDashoffset = offset;
+        }
+
+        function updateStatusUI(status) {
+            const label = document.getElementById('time-label');
+            const statusText = document.getElementById('status-text');
+            
+            if (status === 'playing') {
+                label.textContent = "TOTAL PLAY TIME";
+                statusText.textContent = "PLAYING";
+                statusText.style.opacity = 1;
+                statusText.className = "text-[10px] text-emerald-500 font-bold mt-2 tracking-widest animate-pulse";
+            } else if (status === 'cooling') {
+                label.textContent = "COOLING DOWN...";
+                statusText.textContent = "DRIVER RESTING";
+                statusText.style.opacity = 1;
+                statusText.className = "text-[10px] text-amber-500 font-bold mt-2 tracking-widest animate-pulse";
+            } else {
+                label.textContent = "TOTAL PLAY TIME";
+                statusText.style.opacity = 0;
+            }
+        }
+
+        function formatMinSec(sec) {
+            if(sec < 0) sec = 0;
+            const m = Math.floor(sec / 60).toString().padStart(2, '0');
+            const s = (sec % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        // --- Visualizer ---
+        function initVisualizer() {
+            const container = document.getElementById('visualizer');
+            for(let i=0; i<20; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'v-bar h-1 w-1 bg-gray-800 rounded-full flex-1';
+                container.appendChild(bar);
+            }
+            animateVisualizer();
+        }
+
+        function animateVisualizer() {
+            if(state.isRunning) {
+                const bars = document.querySelectorAll('.v-bar');
+                if (state.phase === 'playing') {
+                    bars.forEach(b => {
+                        b.style.height = Math.random() * 24 + 4 + 'px';
+                    });
+                } else if (state.phase === 'cooling') {
+                     bars.forEach(b => b.style.height = '2px');
+                }
+            }
+            requestAnimationFrame(animateVisualizer);
+        }
+
+        // --- Modal ---
+        function showCert() {
+            document.getElementById('cert-mode').textContent = state.mode.toUpperCase();
+            document.getElementById('cert-time').textContent = `${Math.floor(state.totalPlaySeconds/3600)} HOURS`;
+            document.getElementById('cert-date').textContent = new Date().toLocaleDateString();
+            document.getElementById('cert-modal').classList.remove('hidden');
+        }
+        function closeModal() {
+            document.getElementById('cert-modal').classList.add('hidden');
+        }
+        function shareCert() {
+            const deviceName = document.getElementById('device-name').value || 'MY EARPHONE';
+            const text = `【Earphone Burn-in PRO】\nエージングプログラム完遂証明\n\nDEVICE: ${deviceName}\nMODE: ${state.mode.toUpperCase()}\nTIME: ${Math.floor(state.totalPlaySeconds/3600)} HOURS\nSTATUS: COMPLETED\n\n#イヤホン覚醒 #BurnInPro`;
+            const url = "https://Art2020k.github.io/Gadget/BurnInPro.html"; 
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+        }
+        
+        // Init logic
+        updateTimeDisplay();
+        initVisualizer();
+    </script>
+</body>
+</html>
